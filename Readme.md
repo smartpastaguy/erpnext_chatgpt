@@ -38,11 +38,22 @@ Welcome to the ERPNext OpenAI Integration app. This app allows you to integrate 
 
 1. Go to the [OpenAI API Keys page](https://platform.openai.com/api-keys) and create a new API key.
    
-### Set OpenAI API Key
+### Configure OpenAI Settings
 
 1. Log in to your ERPNext instance.
 2. Navigate to **OpenAI Settings**.
-3. Enter your API key in the **API Key** field and save.
+3. Configure the following settings:
+   - **API Key**: Your OpenAI API key (required)
+   - **Model**: Select the AI model to use (default: gpt-3.5-turbo)
+     - `gpt-3.5-turbo`: Fast and cost-effective for most tasks
+     - `gpt-3.5-turbo-16k`: Same as above with larger context window
+     - `gpt-4`: Most capable model for complex reasoning
+     - `gpt-4-turbo`: Latest GPT-4 with vision capabilities
+     - `gpt-4o`: Optimized GPT-4 for faster responses
+     - `gpt-4o-mini`: Smaller, faster version of GPT-4o
+   - **Max Tokens**: Maximum conversation context (default: 8000)
+4. Click **Test Connection** to verify your API key.
+5. Save the settings.
 
 ![OpenAI API Key](./docs/images/openai-api-key.png)
 

@@ -11,6 +11,22 @@
       "fieldtype": "Data",
       "label": "API Key",
       "reqd": 1
+    },
+    {
+      "fieldname": "model",
+      "fieldtype": "Select",
+      "label": "Model",
+      "options": "gpt-3.5-turbo\ngpt-3.5-turbo-16k\ngpt-4\ngpt-4-turbo\ngpt-4o\ngpt-4o-mini",
+      "default": "gpt-3.5-turbo",
+      "reqd": 1,
+      "description": "Select the OpenAI model to use. GPT-3.5-turbo is most cost-effective, GPT-4 models provide better quality."
+    },
+    {
+      "fieldname": "max_tokens",
+      "fieldtype": "Int",
+      "label": "Max Tokens",
+      "default": 8000,
+      "description": "Maximum number of tokens for conversation context (default: 8000)"
     }
   ],
   "permissions": [
