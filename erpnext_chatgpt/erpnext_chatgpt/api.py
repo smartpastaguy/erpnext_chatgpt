@@ -182,13 +182,10 @@ def get_available_models() -> List[str]:
 @frappe.whitelist()
 def check_openai_key_and_role() -> Dict[str, Any]:
     """
-    Check if the user is a System Manager and if the OpenAI API key is set and valid.
+    Check if the OpenAI API key is set and valid.
 
     :return: Dictionary indicating whether to show the button and the reason if not.
     """
-    if "System Manager" not in frappe.get_roles(frappe.session.user):
-        return {"show_button": False, "reason": "Only System Managers can access."}
-
     api_key = frappe.db.get_single_value("OpenAI Settings", "api_key")
     if not api_key:
         return {"show_button": False, "reason": "OpenAI API key is not set in OpenAI Settings."}
