@@ -182,20 +182,8 @@ def get_available_models() -> List[str]:
 @frappe.whitelist()
 def check_openai_key_and_role() -> Dict[str, Any]:
     """
-    Check if the OpenAI API key is set and valid.
+    Always show the chat button for all users.
 
-    :return: Dictionary indicating whether to show the button and the reason if not.
+    :return: Dictionary indicating to always show the button.
     """
-    api_key = frappe.db.get_single_value("OpenAI Settings", "api_key")
-    if not api_key:
-        return {"show_button": False, "reason": "OpenAI API key is not set in OpenAI Settings."}
-
-    try:
-        # Simple client creation with just the API key
-        client = OpenAI(api_key=api_key)
-        # Test the key by listing models
-        list(client.models.list())
-        return {"show_button": True}
-    except Exception as e:
-        frappe.log_error(str(e), "OpenAI API Key Validation Failed")
-        return {"show_button": False, "reason": str(e)}
+    return {"show_button": True}
