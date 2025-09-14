@@ -151,6 +151,7 @@ async function askQuestion(question) {
     console.log("API response:", data);
 
     const parsedMessage = parseResponseMessage(data);
+    console.log("Parsed message with tool usage:", parsedMessage.tool_usage);
     conversation.push({
       role: "assistant",
       content: parsedMessage.content,
@@ -225,6 +226,7 @@ function displayConversation(conversation) {
 
     // If this is an assistant message with tool usage, add a toggle button and hidden details
     if (message.role === "assistant" && message.tool_usage && message.tool_usage.length > 0) {
+      console.log("Message has tool usage:", message.tool_usage);
       const messageId = `msg-${index}`;
       content += renderToolUsageToggle(message.tool_usage, messageId);
     }
@@ -232,6 +234,22 @@ function displayConversation(conversation) {
     messageElement.innerHTML = content;
     conversationContainer.appendChild(messageElement);
   });
+
+  // Scroll to bottom of conversation
+  scrollToBottom();
+}
+
+function scrollToBottom() {
+  const conversationContainer = document.getElementById("answer");
+  if (conversationContainer) {
+    // Use setTimeout to ensure DOM is updated before scrolling
+    setTimeout(() => {
+      conversationContainer.scrollTo({
+        top: conversationContainer.scrollHeight,
+        behavior: 'smooth'
+      });
+    }, 10);
+  }
 }
 
 function renderToolUsageToggle(toolUsage, messageId) {
@@ -242,10 +260,9 @@ function renderToolUsageToggle(toolUsage, messageId) {
       <button
         class="btn btn-sm btn-outline-secondary"
         onclick="toggleToolUsage('${messageId}')"
-        style="font-size: 12px; padding: 2px 8px;"
+        style="font-size: 12px; padding: 4px 10px; border-radius: 4px;"
       >
-        <i class="fa fa-info-circle"></i>
-        <span id="${messageId}-toggle-text">Show</span> data access info
+        ℹ️ <span id="${messageId}-toggle-text">Show</span> data access info (${toolUsage.length} ${toolUsage.length === 1 ? 'query' : 'queries'})
       </button>
       <div id="${messageId}-details" style="display: none;" class="mt-2">
         ${renderToolUsageDetails(toolUsage)}
@@ -273,7 +290,7 @@ function renderToolUsageDetails(toolUsage) {
     <div class="card" style="background-color: #f8f9fa; border: 1px solid #dee2e6;">
       <div class="card-body" style="padding: 10px;">
         <h6 class="card-title" style="font-size: 14px; margin-bottom: 10px;">
-          <i class="fa fa-database"></i> Data Accessed (${toolUsage.length} ${toolUsage.length === 1 ? 'query' : 'queries'})
+          🗄️ Data Accessed (${toolUsage.length} ${toolUsage.length === 1 ? 'query' : 'queries'})
         </h6>
         <div style="font-size: 12px;">
   `;
