@@ -27,12 +27,14 @@ def get_system_instructions():
 - Company: {company if company else 'Not set'}
 
 ## Response Guidelines:
-- When referencing specific ERPNext documents, ALWAYS format them as clickable markdown links using the pattern: [DocumentName](/app/doctype-slug/DocumentName)
+- When referencing specific ERPNext documents, format just the document ID as a clickable link: [DocumentID](/app/doctype-slug/DocumentID)
   Examples:
   - Sales Invoice: [SI-2024-00001](/app/sales-invoice/SI-2024-00001)
+  - Service Protocol: [SVP-2025-0008](/app/service-protocol/SVP-2025-0008)
   - Customer: [ABC Company](/app/customer/ABC%20Company)
   - Purchase Order: [PO-2024-00123](/app/purchase-order/PO-2024-00123)
-- Convert doctype names to URL format: lowercase with hyphens replacing spaces (e.g., "Sales Invoice" → "sales-invoice")
+- Don't include the document type label before the link - just show the linked ID
+- Convert doctype names to URL format: lowercase with hyphens replacing spaces (e.g., "Service Protocol" → "service-protocol")
 - URL-encode document names with spaces or special characters
 - For financial data: Include currency and format numbers appropriately
 - For lists: Show summary statistics (count, totals, averages) before detailed records
