@@ -37,7 +37,7 @@ get_sales_invoices_tool = {
     "type": "function",
     "function": {
         "name": "get_sales_invoices",
-        "description": "Get sales invoices from the last month",
+        "description": "Retrieve sales invoices within a date range. Returns invoice details including customer, amounts, payment status, and items. Use when asked about sales, revenue, or customer invoices.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -177,7 +177,7 @@ list_invoices_tool = {
     "type": "function",
     "function": {
         "name": "list_invoices",
-        "description": "List invoices with advanced filtering, sorting, and pagination",
+        "description": "List and search invoices (sales or purchase) with filters for status, date, amount, customer/supplier. Returns paginated results with summaries. Use for invoice queries requiring multiple results or complex filters.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -259,7 +259,7 @@ get_sales_invoice_tool = {
     "type": "function",
     "function": {
         "name": "get_sales_invoice",
-        "description": "Get a sales invoice by invoice number",
+        "description": "Get complete details of a specific sales invoice including all line items, taxes, customer info, and payment status. Use when asked about a specific invoice by name/number.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -293,7 +293,7 @@ get_employees_tool = {
     "type": "function",
     "function": {
         "name": "get_employees",
-        "description": "Get a list of employees",
+        "description": "List employees filtered by department or designation. Returns employee names, departments, designations, and employment status. Use for HR queries or workforce analysis.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -331,7 +331,7 @@ get_purchase_orders_tool = {
     "type": "function",
     "function": {
         "name": "get_purchase_orders",
-        "description": "Get purchase orders from the last month",
+        "description": "Retrieve purchase orders within a date range, optionally filtered by supplier. Returns order details, amounts, and supplier information. Use for procurement and supplier analysis.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -372,7 +372,7 @@ get_customers_tool = {
     "type": "function",
     "function": {
         "name": "get_customers",
-        "description": "Get a list of customers by name",
+        "description": "Search for customers by name (partial match supported). Returns customer details including group, type, and territory. Use when searching for specific customers.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -449,7 +449,7 @@ list_customers_tool = {
     "type": "function",
     "function": {
         "name": "list_customers",
-        "description": "List customers with advanced filtering, sorting, and pagination",
+        "description": "List and search customers with filters for name, group, territory, type. Returns customer details with contact info and credit limits. Use for customer database queries and segmentation.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -517,7 +517,7 @@ get_stock_levels_tool = {
     "type": "function",
     "function": {
         "name": "get_stock_levels",
-        "description": "Get current stock levels",
+        "description": "Get current stock quantities for items across all warehouses. Returns available quantity, reserved quantity, and warehouse-wise breakdown. Use for inventory queries.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -551,7 +551,7 @@ get_general_ledger_entries_tool = {
     "type": "function",
     "function": {
         "name": "get_general_ledger_entries",
-        "description": "Get general ledger entries from the last month",
+        "description": "Retrieve general ledger entries for accounting analysis. Returns debit/credit entries with account details, voucher references, and balances. Use for financial transaction queries.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -598,7 +598,7 @@ get_profit_and_loss_statement_tool = {
     "type": "function",
     "function": {
         "name": "get_profit_and_loss_statement",
-        "description": "Get the profit and loss statement report",
+        "description": "Generate profit and loss statement showing income, expenses, and net profit/loss for a period. Returns hierarchical account breakdown with totals. Use for financial performance analysis.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -638,7 +638,7 @@ get_outstanding_invoices_tool = {
     "type": "function",
     "function": {
         "name": "get_outstanding_invoices",
-        "description": "Get the list of outstanding invoices",
+        "description": "List unpaid or partially paid invoices. Returns invoice details with outstanding amounts, due dates, and aging. Use for accounts receivable analysis or collection follow-ups.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -671,7 +671,7 @@ get_sales_orders_tool = {
     "type": "function",
     "function": {
         "name": "get_sales_orders",
-        "description": "Get sales orders from the last month",
+        "description": "Retrieve sales orders within a date range, optionally filtered by customer. Returns order details, delivery status, and billing status. Use for sales pipeline and order tracking.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -798,7 +798,7 @@ list_quotations_tool = {
     "type": "function",
     "function": {
         "name": "list_quotations",
-        "description": "List quotations with advanced filtering, sorting, and pagination",
+        "description": "List and search quotations/proposals with filters for customer, status, date, amount. Returns quotation details with validity and conversion status. Use for sales pipeline and quote tracking.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -979,7 +979,7 @@ list_sales_orders_tool = {
     "type": "function",
     "function": {
         "name": "list_sales_orders",
-        "description": "List sales orders with advanced filtering, sorting, and pagination",
+        "description": "List and search sales orders with filters for customer, delivery/billing status, dates, amounts. Returns order details with fulfillment percentages. Use for order management and fulfillment tracking.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -1265,7 +1265,7 @@ list_delivery_notes_tool = {
     "type": "function",
     "function": {
         "name": "list_delivery_notes",
-        "description": "List delivery notes with advanced filtering, sorting, pagination, and serial number search",
+        "description": "Search and list delivery notes (shipment documents). Returns shipment details with items and billing status. Use for logistics, delivery tracking, and serial number searches.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -1348,7 +1348,7 @@ get_purchase_invoices_tool = {
     "type": "function",
     "function": {
         "name": "get_purchase_invoices",
-        "description": "Get purchase invoices from the last month",
+        "description": "Retrieve purchase invoices within a date range, optionally filtered by supplier. Returns invoice details, amounts, and payment status. Use for accounts payable and supplier billing queries.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -1388,7 +1388,7 @@ get_journal_entries_tool = {
     "type": "function",
     "function": {
         "name": "get_journal_entries",
-        "description": "Get journal entries from the last month",
+        "description": "Retrieve journal entries (manual accounting entries) within a date range. Returns entry details with account postings and remarks. Use for accounting adjustments and manual entry queries.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -1426,7 +1426,7 @@ get_payments_tool = {
     "type": "function",
     "function": {
         "name": "get_payments",
-        "description": "Get payment entries from the last month",
+        "description": "Retrieve payment entries showing money received or paid. Returns payment details, references, and bank/cash accounts used. Use for cash flow and payment tracking.",
         "parameters": {
             "type": "object",
             "properties": {
@@ -1446,6 +1446,282 @@ get_payments_tool = {
             "required": ["start_date", "end_date"],
         },
     },
+}
+
+
+def list_service_protocols(
+    customer=None,
+    status=None,
+    date_from=None,
+    date_to=None,
+    serial_number=None,
+    sort_by='date_of_service',
+    sort_order='desc',
+    limit=10,
+    offset=0
+):
+    """
+    List Service Protocols with filtering, sorting, and pagination.
+    Can filter by customer, status, date range, or serial number in devices.
+    """
+    import frappe
+    import json
+    from datetime import datetime
+
+    filters = {}
+
+    # Add basic filters
+    if customer:
+        filters['customer'] = customer
+
+    if status:
+        filters['docstatus'] = {
+            'Draft': 0,
+            'Submitted': 1,
+            'Cancelled': 2
+        }.get(status, 0)
+
+    # Date range filter
+    if date_from and date_to:
+        filters['date_of_service'] = ['between', [date_from, date_to]]
+    elif date_from:
+        filters['date_of_service'] = ['>=', date_from]
+    elif date_to:
+        filters['date_of_service'] = ['<=', date_to]
+
+    # Handle serial number search in child table
+    if serial_number:
+        # Find service protocols containing this serial number
+        protocol_items = frappe.db.get_all(
+            'Service Protocol Item',
+            filters={'serial_number': serial_number},
+            fields=['parent'],
+            distinct=True
+        )
+
+        if protocol_items:
+            protocol_names = [item.parent for item in protocol_items]
+            filters['name'] = ['in', protocol_names]
+        else:
+            # No protocols found with this serial number
+            return json.dumps({
+                'service_protocols': [],
+                'total_count': 0,
+                'limit': limit,
+                'offset': offset,
+                'summary': {}
+            }, default=custom_json_serializer)
+
+    # Validate sort_by field
+    valid_sort_fields = ['name', 'customer', 'date_of_service', 'creation', 'modified']
+    if sort_by not in valid_sort_fields:
+        sort_by = 'date_of_service'
+
+    # Build order by clause
+    order_by = f'{sort_by} {sort_order}'
+
+    # Get service protocols
+    service_protocols = frappe.db.get_all(
+        'Service Protocol',
+        filters=filters,
+        fields=['name', 'customer', 'date_of_service', 'notes', 'docstatus',
+                'creation', 'modified', 'owner'],
+        order_by=order_by,
+        limit=limit,
+        start=offset
+    )
+
+    # Add customer name and status for each protocol
+    for protocol in service_protocols:
+        # Get customer name
+        if protocol.get('customer'):
+            customer_name = frappe.db.get_value('Customer', protocol['customer'], 'customer_name')
+            protocol['customer_name'] = customer_name
+
+        # Add human-readable status
+        protocol['status'] = {
+            0: 'Draft',
+            1: 'Submitted',
+            2: 'Cancelled'
+        }.get(protocol.get('docstatus', 0), 'Draft')
+
+        # Get device count
+        device_count = frappe.db.count('Service Protocol Item', {'parent': protocol['name']})
+        protocol['device_count'] = device_count
+
+    # Get total count for pagination
+    total_count = frappe.db.count('Service Protocol', filters=filters)
+
+    # Calculate summary statistics
+    summary = {}
+    if service_protocols:
+        summary = {
+            'total_protocols': len(service_protocols),
+            'total_devices_serviced': sum(p.get('device_count', 0) for p in service_protocols),
+            'date_range': {
+                'earliest': min(p['date_of_service'] for p in service_protocols if p.get('date_of_service')),
+                'latest': max(p['date_of_service'] for p in service_protocols if p.get('date_of_service'))
+            } if any(p.get('date_of_service') for p in service_protocols) else None
+        }
+
+    return json.dumps({
+        'service_protocols': service_protocols,
+        'total_count': total_count,
+        'limit': limit,
+        'offset': offset,
+        'summary': summary
+    }, default=custom_json_serializer)
+
+
+def get_service_protocol(protocol_name):
+    """
+    Get detailed information about a specific Service Protocol including all devices.
+    """
+    import frappe
+    import json
+
+    # Get main protocol document
+    protocol = frappe.db.get_value(
+        'Service Protocol',
+        protocol_name,
+        ['name', 'customer', 'date_of_service', 'notes', 'docstatus',
+         'creation', 'modified', 'owner', 'amended_from'],
+        as_dict=True
+    )
+
+    if not protocol:
+        return json.dumps({'error': f'Service Protocol {protocol_name} not found'})
+
+    # Get customer details
+    if protocol.get('customer'):
+        customer_details = frappe.db.get_value(
+            'Customer',
+            protocol['customer'],
+            ['customer_name', 'customer_group', 'territory'],
+            as_dict=True
+        )
+        protocol['customer_details'] = customer_details
+
+    # Add human-readable status
+    protocol['status'] = {
+        0: 'Draft',
+        1: 'Submitted',
+        2: 'Cancelled'
+    }.get(protocol.get('docstatus', 0), 'Draft')
+
+    # Get all devices (Service Protocol Items)
+    devices = frappe.db.get_all(
+        'Service Protocol Item',
+        filters={'parent': protocol_name},
+        fields=['serial_number', 'note'],
+        order_by='idx'
+    )
+
+    # Enrich device information with serial number details
+    for device in devices:
+        if device.get('serial_number'):
+            serial_info = frappe.db.get_value(
+                'Serial No',
+                device['serial_number'],
+                ['item_code', 'item_name', 'warehouse', 'status'],
+                as_dict=True
+            )
+            if serial_info:
+                device['serial_info'] = serial_info
+
+    protocol['devices'] = devices
+    protocol['total_devices'] = len(devices)
+
+    # Get amendment history if this is an amended document
+    if protocol.get('amended_from'):
+        protocol['amendment_history'] = []
+        current = protocol.get('amended_from')
+        while current:
+            amendment = frappe.db.get_value(
+                'Service Protocol',
+                current,
+                ['name', 'date_of_service', 'modified'],
+                as_dict=True
+            )
+            if amendment:
+                protocol['amendment_history'].append(amendment)
+                current = frappe.db.get_value('Service Protocol', current, 'amended_from')
+            else:
+                break
+
+    return json.dumps(protocol, default=custom_json_serializer)
+
+
+# Tool definitions for Service Protocol
+list_service_protocols_tool = {
+    "type": "function",
+    "function": {
+        "name": "list_service_protocols",
+        "description": "List or find Service Protocols. Can search by serial number to find which service protocol contains a specific device. Service Protocols track maintenance and service activities performed on devices. Use this to find service protocols for specific serial numbers like 'Find service protocol for serial number OCU-00001'.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "customer": {
+                    "type": "string",
+                    "description": "Filter by customer name or ID"
+                },
+                "status": {
+                    "type": "string",
+                    "enum": ["Draft", "Submitted", "Cancelled"],
+                    "description": "Document status"
+                },
+                "date_from": {
+                    "type": "string",
+                    "description": "Start date for service date range (YYYY-MM-DD)"
+                },
+                "date_to": {
+                    "type": "string",
+                    "description": "End date for service date range (YYYY-MM-DD)"
+                },
+                "serial_number": {
+                    "type": "string",
+                    "description": "Find service protocols containing this serial number (e.g., 'OCU-00001'). Use this when asked to find service protocol for a specific serial number"
+                },
+                "sort_by": {
+                    "type": "string",
+                    "enum": ["name", "customer", "date_of_service", "creation", "modified"],
+                    "description": "Field to sort by (default: date_of_service)"
+                },
+                "sort_order": {
+                    "type": "string",
+                    "enum": ["asc", "desc"],
+                    "description": "Sort order (default: desc)"
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "Number of records to return (default: 10, max: 100)"
+                },
+                "offset": {
+                    "type": "integer",
+                    "description": "Number of records to skip for pagination"
+                }
+            },
+            "required": []
+        }
+    }
+}
+
+get_service_protocol_tool = {
+    "type": "function",
+    "function": {
+        "name": "get_service_protocol",
+        "description": "Get detailed information about a specific Service Protocol including all serviced devices, customer details, and amendment history",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "protocol_name": {
+                    "type": "string",
+                    "description": "The Service Protocol document name (e.g., SVP-2025-0001)"
+                }
+            },
+            "required": ["protocol_name"]
+        }
+    }
 }
 
 
@@ -1469,6 +1745,8 @@ def get_tools():
         get_purchase_invoices_tool,
         get_journal_entries_tool,
         get_payments_tool,
+        list_service_protocols_tool,
+        get_service_protocol_tool,
     ]
 
 
@@ -1491,4 +1769,6 @@ available_functions = {
     "get_purchase_invoices": get_purchase_invoices,
     "get_journal_entries": get_journal_entries,
     "get_payments": get_payments,
+    "list_service_protocols": list_service_protocols,
+    "get_service_protocol": get_service_protocol,
 }

@@ -368,6 +368,109 @@ function renderToolParameters(params) {
   return paramHtml;
 }
 
+function convertERPNextReferencesToLinks(content) {
+  // Map of common ERPNext DocTypes to their display names
+  const docTypeMap = {
+    'Sales Invoice': 'Sales Invoice',
+    'Purchase Invoice': 'Purchase Invoice',
+    'Sales Order': 'Sales Order',
+    'Purchase Order': 'Purchase Order',
+    'Delivery Note': 'Delivery Note',
+    'Material Request': 'Material Request',
+    'Stock Entry': 'Stock Entry',
+    'Payment Entry': 'Payment Entry',
+    'Journal Entry': 'Journal Entry',
+    'Customer': 'Customer',
+    'Supplier': 'Supplier',
+    'Item': 'Item',
+    'Employee': 'Employee',
+    'Lead': 'Lead',
+    'Opportunity': 'Opportunity',
+    'Quotation': 'Quotation',
+    'Purchase Receipt': 'Purchase Receipt',
+    'Work Order': 'Work Order',
+    'BOM': 'BOM',
+    'Task': 'Task',
+    'Project': 'Project',
+    'Asset': 'Asset',
+    'Service Protocol': 'Service Protocol'
+  };
+
+  // Create regex pattern for all DocTypes
+  const docTypePattern = Object.keys(docTypeMap).join('|');
+
+  // Pattern to match DocType: DocumentName format
+  // Matches patterns like "Sales Invoice: SINV-2025-00001" or "Delivery Note: MAT-DN-2025-00201"
+  const docRefRegex = new RegExp(
+    `\\b(${docTypePattern}):\\s*([A-Z0-9][A-Z0-9\\-/\\.]+(?:[0-9]+)?)\\b`,
+    'gi'
+  );
+
+  // Also match standalone Service Protocol references (SVP-YYYY-####)
+  const serviceProtocolRegex = /\b(SVP-\d{4}-\d{4})\b/gi;
+
+  // Generate unique IDs for click handlers
+  let linkCounter = 0;
+  const clickHandlers = [];
+
+  // Replace document references with clickable links
+  let processedContent = content.replace(docRefRegex, (match, docType, docName) => {
+    linkCounter++;
+    const linkId = `erpnext-link-${Date.now()}-${linkCounter}`;
+    const normalizedDocType = Object.keys(docTypeMap).find(
+      key => key.toLowerCase() === docType.toLowerCase()
+    ) || docType;
+
+    // Store the click handler to be attached after rendering
+    clickHandlers.push({
+      id: linkId,
+      docType: normalizedDocType,
+      docName: docName.trim()
+    });
+
+    // Return a styled link element
+    return `<a href="#" id="${linkId}" class="erpnext-doc-link" style="color: #007bff; text-decoration: underline; cursor: pointer;" title="Open ${normalizedDocType}: ${docName.trim()}">${match}</a>`;
+  });
+
+  // Also replace standalone Service Protocol references
+  processedContent = processedContent.replace(serviceProtocolRegex, (match, protocolName) => {
+    linkCounter++;
+    const linkId = `erpnext-link-${Date.now()}-${linkCounter}`;
+
+    // Store the click handler to be attached after rendering
+    clickHandlers.push({
+      id: linkId,
+      docType: 'Service Protocol',
+      docName: protocolName.trim()
+    });
+
+    // Return a styled link element
+    return `<a href="#" id="${linkId}" class="erpnext-doc-link" style="color: #007bff; text-decoration: underline; cursor: pointer;" title="Open Service Protocol: ${protocolName.trim()}">${match}</a>`;
+  });
+
+  // Attach click handlers after the content is rendered
+  // Using setTimeout to ensure DOM is updated
+  if (clickHandlers.length > 0) {
+    setTimeout(() => {
+      clickHandlers.forEach(handler => {
+        const element = document.getElementById(handler.id);
+        if (element) {
+          element.addEventListener('click', (e) => {
+            e.preventDefault();
+            console.log(`Opening ${handler.docType}: ${handler.docName} in new tab`);
+            // Build the URL for the document
+            const url = `/app/${handler.docType.toLowerCase().replace(/ /g, '-')}/${encodeURIComponent(handler.docName)}`;
+            // Open in new tab
+            window.open(url, '_blank');
+          });
+        }
+      });
+    }, 100);
+  }
+
+  return processedContent;
+}
+
 function renderMessageContent(content) {
   console.log("Rendering content:", content);
 
@@ -375,7 +478,9 @@ function renderMessageContent(content) {
   if (typeof content === "boolean") return `<strong>${content}</strong>`;
   if (typeof content === "number") return `<span>${content}</span>`;
   if (typeof content === "string") {
-    const parsed = DOMPurify.sanitize(marked.parse(content));
+    // First convert ERPNext references to links, then process markdown
+    const contentWithLinks = convertERPNextReferencesToLinks(content);
+    const parsed = DOMPurify.sanitize(marked.parse(contentWithLinks));
     console.log(parsed);
     return parsed;
   }
