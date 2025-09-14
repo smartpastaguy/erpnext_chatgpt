@@ -34,14 +34,21 @@ function createChatButton() {
   Object.assign(button, {
     id: "chatButton",
     className: "btn btn-primary btn-circle",
-    innerText: "+",
-    title: "Open AI Chat",
+    innerHTML: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path><circle cx="9" cy="10" r="1"></circle><circle cx="15" cy="10" r="1"></circle></svg>',
+    title: "Open AI Assistant",
   });
   Object.assign(button.style, {
     position: "fixed",
     zIndex: "1000",
     bottom: "20px",
     right: "20px",
+    width: "56px",
+    height: "56px",
+    borderRadius: "50%",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    boxShadow: "0 2px 10px rgba(0,0,0,0.2)",
   });
   return button;
 }
