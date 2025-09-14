@@ -147,15 +147,12 @@ def test_openai_api_key(api_key: str) -> bool:
     :return: True if the API key is valid, False otherwise.
     """
     try:
-        # Import OpenAI and httpx
+        # Import OpenAI
         from openai import OpenAI
-        import httpx
 
-        # Create HTTP client without proxy
-        http_client = httpx.Client(proxies=None, trust_env=False)
-
-        # Simple client creation with the API key and custom HTTP client
-        client = OpenAI(api_key=api_key, http_client=http_client)
+        # Simple client creation with just the API key
+        # httpx==0.27.2 handles proxies correctly
+        client = OpenAI(api_key=api_key)
         # Test the key by listing models
         list(client.models.list())
         return True
@@ -201,20 +198,29 @@ def test_connection() -> Dict[str, Any]:
         if not api_key:
             return {"success": False, "message": _("OpenAI API key is not set. Please enter an API key first.")}
 
-        # Debug: Log what we're trying to do
-        frappe.log_error("Attempting to create OpenAI client", "OpenAI Debug")
+        # Import OpenAI
+        from openai import OpenAI
 
-        try:
-            # Try the standard approach first
-            from openai import OpenAI
+        # Simple initialization with just API key
+        # httpx==0.27.2 handles proxies correctly
+        client = OpenAI(api_key=api_key)
 
-            # Debug: Check if OpenAI class has been modified
-            import inspect
-            sig = inspect.signature(OpenAI.__init__)
-            frappe.log_error(f"OpenAI.__init__ signature: {sig}", "OpenAI Debug")
+        # Test the connection by listing models
+        models = list(client.models.list())
 
-            # Simple initialization - just API key
-            client = OpenAI(api_key=api_key)
+        if models:
+            return {"success": True, "message": _("Connection successful! OpenAI API is working correctly.")}
+        else:
+            return {"success": False, "message": _("Connection established but no models available.")}
+
+    except Exception as e:
+        frappe.log_error(str(e), "OpenAI Connection Test Failed")
+
+        # Provide specific error messages
+        if "api" in str(e).lower() and "key" in str(e).lower():
+            return {"success": False, "message": _("Invalid API key. Please check your OpenAI API key.")}
+        else:
+            return {"success": False, "message": _("Connection failed: {0}").format(str(e))}"}
 
         except TypeError as e:
             # If we get the proxies error, try direct API call
