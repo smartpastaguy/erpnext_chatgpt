@@ -4,9 +4,33 @@ import json
 from typing import List, Dict, Any
 from erpnext_chatgpt.erpnext_chatgpt.tools import get_tools, available_functions
 
-def get_pre_prompt():
-    """Get the pre-prompt with current date."""
-    return f"You are an AI assistant integrated with ERPNext. Please provide accurate and helpful responses based on the following questions and data provided by the user. The current date is {frappe.utils.now()}."
+def get_system_instructions():
+    """Get system instructions with current date and user context."""
+    current_user = frappe.session.user
+    user_full_name = frappe.get_value("User", current_user, "full_name") or current_user
+    user_roles = frappe.get_roles(current_user)
+    company = frappe.defaults.get_user_default("company") or frappe.defaults.get_global_default("company")
+
+    return f"""You are an AI assistant integrated with ERPNext, helping {user_full_name} ({current_user}) with their ERP queries.
+
+## Core Instructions:
+- Provide accurate, concise, and actionable responses based on ERPNext data
+- When querying ERPNext objects without specific property requests, return the 'name' property by default
+- Ask clarifying questions when queries are ambiguous
+- Format responses clearly using markdown for better readability
+- When presenting data, summarize key insights before showing detailed records
+
+## Current Context:
+- Date/Time: {frappe.utils.now()}
+- User: {user_full_name} ({current_user})
+- Roles: {', '.join(user_roles) if user_roles else 'No roles assigned'}
+- Company: {company if company else 'Not set'}
+
+## Response Guidelines:
+- For financial data: Include currency and format numbers appropriately
+- For lists: Show summary statistics (count, totals, averages) before detailed records
+- For errors: Provide helpful suggestions to resolve the issue
+- Keep responses focused and avoid unnecessary technical details unless specifically asked"""
 
 def get_model_settings():
     """Get model and max_tokens from settings."""
@@ -146,9 +170,9 @@ def ask_openai_question(conversation: List[Dict[str, Any]]) -> Dict[str, Any]:
         client = get_openai_client()
         tool_usage_log = []
 
-        # Add the pre-prompt as the initial message if not present
+        # Add system instructions as the initial message if not present
         if not conversation or conversation[0].get("role") != "system":
-            conversation.insert(0, {"role": "system", "content": get_pre_prompt()})
+            conversation.insert(0, {"role": "system", "content": get_system_instructions()})
 
         # Get model settings
         model, max_tokens = get_model_settings()

@@ -114,8 +114,11 @@ function handleAskButtonClick() {
   const question = input.value.trim();
   if (!question) return;
 
-  input.value = "Loading...";
-  askQuestion(question).finally(() => (input.value = ""));
+  // Clear the input immediately after getting the question
+  input.value = "";
+
+  // Call askQuestion which will handle disabling/enabling
+  askQuestion(question);
 }
 
 function clearConversation() {
@@ -126,6 +129,15 @@ function clearConversation() {
 
 
 async function askQuestion(question) {
+  // Get input and button elements
+  const input = document.getElementById("question");
+  const askButton = document.getElementById("askButton");
+
+  // Disable input and button while loading
+  input.disabled = true;
+  askButton.disabled = true;
+  askButton.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Processing...';
+
   // Add user message to conversation
   conversation.push({ role: "user", content: question });
   displayConversation(conversation);
@@ -170,6 +182,14 @@ async function askQuestion(question) {
         Error: ${error.message}. Please try again later.
       </div>
     `;
+  } finally {
+    // Re-enable input and button
+    input.disabled = false;
+    askButton.disabled = false;
+    askButton.innerHTML = 'Ask';
+
+    // Focus back on input for convenience
+    input.focus();
   }
 }
 
