@@ -12,7 +12,7 @@ app_include_js = "/assets/erpnext_chatgpt/js/frontend.js?v=7"
 
 # Doctype JavaScript
 doctype_js = {
-    "OpenAI Settings": "erpnext_chatgpt/doctype/openai_settings/openai_settings.js"
+    "OpenAI Settings": "erpnext_chatgpt/erpnext_chatgpt/doctype/openai_settings/openai_settings.js"
 }
 
 fixtures = [{"dt": "DocType", "filters": [["name", "in", ["OpenAI Settings"]]]}]
