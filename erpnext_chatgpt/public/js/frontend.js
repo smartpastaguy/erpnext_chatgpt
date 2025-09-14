@@ -369,6 +369,16 @@ function renderToolParameters(params) {
 }
 
 function convertERPNextReferencesToLinks(content) {
+  // If content already contains HTML anchor tags from markdown parsing,
+  // we need to be careful not to double-link things
+  // First, let's temporarily replace existing anchor tags to protect them
+  const anchorPlaceholders = [];
+  let protectedContent = content.replace(/<a[^>]*>.*?<\/a>/gi, (match) => {
+    const placeholder = `__ANCHOR_PLACEHOLDER_${anchorPlaceholders.length}__`;
+    anchorPlaceholders.push(match);
+    return placeholder;
+  });
+
   // Map of common ERPNext DocTypes to their display names
   const docTypeMap = {
     'Sales Invoice': 'Sales Invoice',
@@ -407,14 +417,15 @@ function convertERPNextReferencesToLinks(content) {
   );
 
   // Also match standalone Service Protocol references (SVP-YYYY-####)
+  // But only if they're not already in a link
   const serviceProtocolRegex = /\b(SVP-\d{4}-\d{4})\b/gi;
 
   // Generate unique IDs for click handlers
   let linkCounter = 0;
   const clickHandlers = [];
 
-  // Replace document references with clickable links
-  let processedContent = content.replace(docRefRegex, (match, docType, docName) => {
+  // Replace document references with clickable links (working on protected content)
+  let processedContent = protectedContent.replace(docRefRegex, (match, docType, docName) => {
     linkCounter++;
     const linkId = `erpnext-link-${Date.now()}-${linkCounter}`;
     const normalizedDocType = Object.keys(docTypeMap).find(
@@ -432,8 +443,13 @@ function convertERPNextReferencesToLinks(content) {
     return `<a href="#" id="${linkId}" class="erpnext-doc-link" style="color: #007bff; text-decoration: underline; cursor: pointer;" title="Open ${normalizedDocType}: ${docName.trim()}">${match}</a>`;
   });
 
-  // Also replace standalone Service Protocol references
-  processedContent = processedContent.replace(serviceProtocolRegex, (match, protocolName) => {
+  // Also replace standalone Service Protocol references (but not if they're placeholders)
+  processedContent = processedContent.replace(serviceProtocolRegex, (match, protocolName, offset, string) => {
+    // Check if this match is part of a placeholder
+    if (string.substring(offset - 20, offset).includes('__ANCHOR_PLACEHOLDER_')) {
+      return match; // Don't replace if it's part of a placeholder
+    }
+
     linkCounter++;
     const linkId = `erpnext-link-${Date.now()}-${linkCounter}`;
 
@@ -446,6 +462,11 @@ function convertERPNextReferencesToLinks(content) {
 
     // Return a styled link element
     return `<a href="#" id="${linkId}" class="erpnext-doc-link" style="color: #007bff; text-decoration: underline; cursor: pointer;" title="Open Service Protocol: ${protocolName.trim()}">${match}</a>`;
+  });
+
+  // Restore the original anchor tags
+  anchorPlaceholders.forEach((anchor, index) => {
+    processedContent = processedContent.replace(`__ANCHOR_PLACEHOLDER_${index}__`, anchor);
   });
 
   // Attach click handlers after the content is rendered
@@ -478,11 +499,15 @@ function renderMessageContent(content) {
   if (typeof content === "boolean") return `<strong>${content}</strong>`;
   if (typeof content === "number") return `<span>${content}</span>`;
   if (typeof content === "string") {
-    // First convert ERPNext references to links, then process markdown
-    const contentWithLinks = convertERPNextReferencesToLinks(content);
-    const parsed = DOMPurify.sanitize(marked.parse(contentWithLinks));
-    console.log(parsed);
-    return parsed;
+    // First parse markdown to convert markdown links to HTML
+    const parsed = marked.parse(content);
+    // Then sanitize the HTML
+    const sanitized = DOMPurify.sanitize(parsed);
+    // Finally, convert any remaining plain text ERPNext references to links
+    // (but this won't affect already-rendered HTML links)
+    const finalContent = convertERPNextReferencesToLinks(sanitized);
+    console.log(finalContent);
+    return finalContent;
   }
   if (Array.isArray(content)) {
     return `<ul class="list-group">${content
