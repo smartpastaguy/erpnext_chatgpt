@@ -22,14 +22,16 @@ def json_serial(obj):
 
 
 def get_sales_invoices(start_date=None, end_date=None):
-    query = "SELECT * FROM `tabSales Invoice`"
-    params = []
+    filters = {}
     if start_date and end_date:
-        query += " WHERE posting_date BETWEEN %s AND %s"
-        params.extend([start_date, end_date])
-    return json.dumps(
-        frappe.db.sql(query, tuple(params), as_dict=True), default=json_serial
+        filters['posting_date'] = ['between', [start_date, end_date]]
+
+    invoices = frappe.db.get_all(
+        'Sales Invoice',
+        filters=filters,
+        fields=['*']
     )
+    return json.dumps(invoices, default=json_serial)
 
 get_sales_invoices_tool = {
     "type": "function",
@@ -55,10 +57,13 @@ get_sales_invoices_tool = {
 
 
 def get_sales_invoice(invoice_number):
-    query = "SELECT * FROM `tabSales Invoice` WHERE name=%s"
-    return json.dumps(
-        frappe.db.sql(query, (invoice_number,), as_dict=True), default=json_serial
+    invoice = frappe.db.get_value(
+        'Sales Invoice',
+        invoice_number,
+        '*',
+        as_dict=True
     )
+    return json.dumps([invoice] if invoice else [], default=json_serial)
 
 
 get_sales_invoice_tool = {
@@ -81,20 +86,18 @@ get_sales_invoice_tool = {
 
 
 def get_employees(department=None, designation=None):
-    query = "SELECT * FROM `tabEmployee`"
-    filters = []
-    params = []
+    filters = {}
     if department:
-        filters.append("department = %s")
-        params.append(department)
+        filters['department'] = department
     if designation:
-        filters.append("designation = %s")
-        params.append(designation)
-    if filters:
-        query += " WHERE " + " AND ".join(filters)
-    return json.dumps(
-        frappe.db.sql(query, tuple(params), as_dict=True), default=json_serial
+        filters['designation'] = designation
+
+    employees = frappe.db.get_all(
+        'Employee',
+        filters=filters,
+        fields=['*']
     )
+    return json.dumps(employees, default=json_serial)
 
 
 get_employees_tool = {
@@ -121,20 +124,18 @@ get_employees_tool = {
 
 
 def get_purchase_orders(start_date=None, end_date=None, supplier=None):
-    query = "SELECT * FROM `tabPurchase Order`"
-    filters = []
-    params = []
+    filters = {}
     if start_date and end_date:
-        filters.append("transaction_date BETWEEN %s AND %s")
-        params.extend([start_date, end_date])
+        filters['transaction_date'] = ['between', [start_date, end_date]]
     if supplier:
-        filters.append("supplier = %s")
-        params.append(supplier)
-    if filters:
-        query += " WHERE " + " AND ".join(filters)
-    return json.dumps(
-        frappe.db.sql(query, tuple(params), as_dict=True), default=json_serial
+        filters['supplier'] = supplier
+
+    purchase_orders = frappe.db.get_all(
+        'Purchase Order',
+        filters=filters,
+        fields=['*']
     )
+    return json.dumps(purchase_orders, default=json_serial)
 
 
 get_purchase_orders_tool = {
@@ -164,28 +165,31 @@ get_purchase_orders_tool = {
 }
 
 
-def get_customers(customer_group=None):
-    query = "SELECT * FROM `tabCustomer`"
-    params = []
-    if customer_group:
-        query += " WHERE customer_group = %s"
-        params.append(customer_group)
-    return json.dumps(
-        frappe.db.sql(query, tuple(params), as_dict=True), default=json_serial
+def get_customers(customer_name=None):
+    filters = {}
+    if customer_name:
+        # Use partial match for customer name search
+        filters['customer_name'] = ['like', f'%{customer_name}%']
+
+    customers = frappe.db.get_all(
+        'Customer',
+        filters=filters,
+        fields=['*']
     )
+    return json.dumps(customers, default=json_serial)
 
 
 get_customers_tool = {
     "type": "function",
     "function": {
         "name": "get_customers",
-        "description": "Get a list of customers",
+        "description": "Get a list of customers by name",
         "parameters": {
             "type": "object",
             "properties": {
-                "customer_group": {
+                "customer_name": {
                     "type": "string",
-                    "description": "Customer group",
+                    "description": "Customer name to search for (partial match supported)",
                 },
             },
             "required": [],
@@ -195,14 +199,16 @@ get_customers_tool = {
 
 
 def get_stock_levels(item_code=None):
-    query = "SELECT item_code, warehouse, actual_qty FROM `tabBin`"
-    params = []
+    filters = {}
     if item_code:
-        query += " WHERE item_code = %s"
-        params.append(item_code)
-    return json.dumps(
-        frappe.db.sql(query, tuple(params), as_dict=True), default=json_serial
+        filters['item_code'] = item_code
+
+    stock_levels = frappe.db.get_all(
+        'Bin',
+        filters=filters,
+        fields=['item_code', 'warehouse', 'actual_qty']
     )
+    return json.dumps(stock_levels, default=json_serial)
 
 
 get_stock_levels_tool = {
@@ -225,24 +231,18 @@ get_stock_levels_tool = {
 
 
 def get_general_ledger_entries(start_date=None, end_date=None, account=None):
-    query = "SELECT * FROM `tabGL Entry`"
-    filters = []
-    params = []
-
+    filters = {}
     if start_date and end_date:
-        filters.append("posting_date BETWEEN %s AND %s")
-        params.extend([start_date, end_date])
-
+        filters['posting_date'] = ['between', [start_date, end_date]]
     if account:
-        filters.append("account = %s")
-        params.append(account)
+        filters['account'] = account
 
-    if filters:
-        query += " WHERE " + " AND ".join(filters)
-
-    return json.dumps(
-        frappe.db.sql(query, tuple(params), as_dict=True), default=json_serial
+    gl_entries = frappe.db.get_all(
+        'GL Entry',
+        filters=filters,
+        fields=['*']
     )
+    return json.dumps(gl_entries, default=json_serial)
 
 
 get_general_ledger_entries_tool = {
@@ -264,43 +264,6 @@ get_general_ledger_entries_tool = {
                 "account": {
                     "type": "string",
                     "description": "Account name",
-                },
-            },
-            "required": ["start_date", "end_date"],
-        },
-    },
-}
-
-
-def get_balance_sheet(start_date, end_date):
-    query = """
-        SELECT
-            account, 
-            sum(debit) - sum(credit) as balance
-        FROM `tabGL Entry`
-        WHERE posting_date BETWEEN %s AND %s
-        GROUP BY account
-    """
-    return json.dumps(
-        frappe.db.sql(query, (start_date, end_date), as_dict=True), default=json_serial
-    )
-
-
-get_balance_sheet_tool = {
-    "type": "function",
-    "function": {
-        "name": "get_balance_sheet",
-        "description": "Get the balance sheet report",
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "start_date": {
-                    "type": "string",
-                    "description": "Start date in YYYY-MM-DD format",
-                },
-                "end_date": {
-                    "type": "string",
-                    "description": "End date in YYYY-MM-DD format",
                 },
             },
             "required": ["start_date", "end_date"],
@@ -357,14 +320,16 @@ get_profit_and_loss_statement_tool = {
 
 
 def get_outstanding_invoices(customer=None):
-    query = "SELECT * FROM `tabSales Invoice` WHERE outstanding_amount > 0"
-    params = []
+    filters = {'outstanding_amount': ['>', 0]}
     if customer:
-        query += " AND customer = %s"
-        params.append(customer)
-    return json.dumps(
-        frappe.db.sql(query, tuple(params), as_dict=True), default=json_serial
+        filters['customer'] = customer
+
+    invoices = frappe.db.get_all(
+        'Sales Invoice',
+        filters=filters,
+        fields=['*']
     )
+    return json.dumps(invoices, default=json_serial)
 
 
 get_outstanding_invoices_tool = {
@@ -386,20 +351,18 @@ get_outstanding_invoices_tool = {
 }
 
 def get_sales_orders(start_date=None, end_date=None, customer=None):
-    query = "SELECT * FROM `tabSales Order`"
-    filters = []
-    params = []
+    filters = {}
     if start_date and end_date:
-        filters.append("transaction_date BETWEEN %s AND %s")
-        params.extend([start_date, end_date])
+        filters['transaction_date'] = ['between', [start_date, end_date]]
     if customer:
-        filters.append("customer = %s")
-        params.append(customer)
-    if filters:
-        query += " WHERE " + " AND ".join(filters)
-    return json.dumps(
-        frappe.db.sql(query, tuple(params), as_dict=True), default=json_serial
+        filters['customer'] = customer
+
+    sales_orders = frappe.db.get_all(
+        'Sales Order',
+        filters=filters,
+        fields=['*']
     )
+    return json.dumps(sales_orders, default=json_serial)
 
 
 get_sales_orders_tool = {
@@ -430,20 +393,18 @@ get_sales_orders_tool = {
 
 
 def get_purchase_invoices(start_date=None, end_date=None, supplier=None):
-    query = "SELECT * FROM `tabPurchase Invoice`"
-    filters = []
-    params = []
+    filters = {}
     if start_date and end_date:
-        filters.append("posting_date BETWEEN %s AND %s")
-        params.extend([start_date, end_date])
+        filters['posting_date'] = ['between', [start_date, end_date]]
     if supplier:
-        filters.append("supplier = %s")
-        params.append(supplier)
-    if filters:
-        query += " WHERE " + " AND ".join(filters)
-    return json.dumps(
-        frappe.db.sql(query, tuple(params), as_dict=True), default=json_serial
+        filters['supplier'] = supplier
+
+    purchase_invoices = frappe.db.get_all(
+        'Purchase Invoice',
+        filters=filters,
+        fields=['*']
     )
+    return json.dumps(purchase_invoices, default=json_serial)
 
 
 
@@ -475,14 +436,16 @@ get_purchase_invoices_tool = {
 
 
 def get_journal_entries(start_date=None, end_date=None):
-    query = "SELECT * FROM `tabJournal Entry`"
-    params = []
+    filters = {}
     if start_date and end_date:
-        query += " WHERE posting_date BETWEEN %s AND %s"
-        params.extend([start_date, end_date])
-    return json.dumps(
-        frappe.db.sql(query, tuple(params), as_dict=True), default=json_serial
+        filters['posting_date'] = ['between', [start_date, end_date]]
+
+    journal_entries = frappe.db.get_all(
+        'Journal Entry',
+        filters=filters,
+        fields=['*']
     )
+    return json.dumps(journal_entries, default=json_serial)
 
 
 get_journal_entries_tool = {
@@ -509,20 +472,18 @@ get_journal_entries_tool = {
 
 
 def get_payments(start_date=None, end_date=None, payment_type=None):
-    query = "SELECT * FROM `tabPayment Entry`"
-    filters = []
-    params = []
+    filters = {}
     if start_date and end_date:
-        filters.append("posting_date BETWEEN %s AND %s")
-        params.extend([start_date, end_date])
+        filters['posting_date'] = ['between', [start_date, end_date]]
     if payment_type:
-        filters.append("payment_type = %s")
-        params.append(payment_type)
-    if filters:
-        query += " WHERE " + " AND ".join(filters)
-    return json.dumps(
-        frappe.db.sql(query, tuple(params), as_dict=True), default=json_serial
+        filters['payment_type'] = payment_type
+
+    payment_entries = frappe.db.get_all(
+        'Payment Entry',
+        filters=filters,
+        fields=['*']
     )
+    return json.dumps(payment_entries, default=json_serial)
 
 
 get_payments_tool = {
@@ -561,7 +522,6 @@ def get_tools():
         get_customers_tool,
         get_stock_levels_tool,
         get_general_ledger_entries_tool,
-        get_balance_sheet_tool,
         get_profit_and_loss_statement_tool,
         get_outstanding_invoices_tool,
         get_sales_orders_tool,
@@ -579,7 +539,6 @@ available_functions = {
     "get_customers": get_customers,
     "get_stock_levels": get_stock_levels,
     "get_general_ledger_entries": get_general_ledger_entries,
-    "get_balance_sheet": get_balance_sheet,
     "get_profit_and_loss_statement": get_profit_and_loss_statement,
     "get_outstanding_invoices": get_outstanding_invoices,
     "get_sales_orders": get_sales_orders,
