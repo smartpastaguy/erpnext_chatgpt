@@ -8,11 +8,14 @@ app_email = "williamluke4@gmail.com"
 app_license = "MIT"
 
 # Include JS and CSS files in header of desk.html
-app_include_js = "/assets/erpnext_chatgpt/js/frontend.js?v=7"
+app_include_js = [
+    "/assets/erpnext_chatgpt/js/frontend.js?v=7",
+    "/assets/erpnext_chatgpt/js/openai_settings.js?v=1"
+]
 
 # Doctype JavaScript
 doctype_js = {
-    "OpenAI Settings": "erpnext_chatgpt/erpnext_chatgpt/doctype/openai_settings/openai_settings.js"
+    "OpenAI Settings": "public/js/openai_settings.js"
 }
 
 fixtures = [{"dt": "DocType", "filters": [["name", "in", ["OpenAI Settings"]]]}]
