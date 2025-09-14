@@ -180,6 +180,34 @@ def get_available_models() -> List[str]:
         return ["gpt-3.5-turbo", "gpt-3.5-turbo-16k", "gpt-4", "gpt-4-turbo", "gpt-4o", "gpt-4o-mini"]
 
 @frappe.whitelist()
+def test_connection() -> Dict[str, Any]:
+    """
+    Test the OpenAI connection by initializing the client and making a simple API call.
+
+    :return: Dictionary with success status and message.
+    """
+    try:
+        # Get the API key from settings
+        api_key = frappe.db.get_single_value("OpenAI Settings", "api_key")
+        if not api_key:
+            return {"success": False, "message": _("OpenAI API key is not set. Please enter an API key first.")}
+
+        # Initialize the OpenAI client
+        client = OpenAI(api_key=api_key)
+
+        # Test the connection by listing models
+        models = list(client.models.list())
+
+        if models:
+            return {"success": True, "message": _("Connection successful! OpenAI API is working correctly.")}
+        else:
+            return {"success": False, "message": _("Connection established but no models available.")}
+
+    except Exception as e:
+        frappe.log_error(str(e), "OpenAI Connection Test Failed")
+        return {"success": False, "message": _("Connection failed: {0}").format(str(e))}
+
+@frappe.whitelist()
 def check_openai_key_and_role() -> Dict[str, Any]:
     """
     Always show the chat button for all users.

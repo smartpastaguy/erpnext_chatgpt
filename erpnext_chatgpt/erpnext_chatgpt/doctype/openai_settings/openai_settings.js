@@ -2,31 +2,32 @@ frappe.ui.form.on("OpenAI Settings", {
   refresh: function (frm) {
     // Add custom button to test API key
     frm.add_custom_button(__("Test Connection"), function () {
-      if (!frm.doc.api_key) {
-        frappe.msgprint(__("Please enter an API Key first"));
-        return;
-      }
-
       frappe.call({
-        method: "erpnext_chatgpt.erpnext_chatgpt.api.test_openai_api_key",
-        args: {
-          api_key: frm.doc.api_key,
-        },
+        method: "erpnext_chatgpt.erpnext_chatgpt.api.test_connection",
         callback: function (r) {
           if (r.message) {
-            frappe.msgprint({
-              title: __("Success"),
-              message: __("API Key is valid and connection successful!"),
-              indicator: "green",
-            });
-          } else {
-            frappe.msgprint({
-              title: __("Error"),
-              message: __("Invalid API Key or connection failed. Please check your API key."),
-              indicator: "red",
-            });
+            if (r.message.success) {
+              frappe.msgprint({
+                title: __("Success"),
+                message: r.message.message,
+                indicator: "green",
+              });
+            } else {
+              frappe.msgprint({
+                title: __("Connection Failed"),
+                message: r.message.message,
+                indicator: "red",
+              });
+            }
           }
         },
+        error: function(r) {
+          frappe.msgprint({
+            title: __("Error"),
+            message: __("An error occurred while testing the connection."),
+            indicator: "red",
+          });
+        }
       });
     });
 
