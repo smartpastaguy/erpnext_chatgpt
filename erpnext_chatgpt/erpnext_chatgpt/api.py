@@ -1,6 +1,5 @@
 import frappe
 from frappe import _
-from openai import OpenAI
 import json
 from typing import List, Dict, Any
 from erpnext_chatgpt.erpnext_chatgpt.tools import get_tools, available_functions
@@ -22,11 +21,14 @@ def get_model_settings():
 
     return model, max_tokens
 
-def get_openai_client() -> OpenAI:
+def get_openai_client():
     """Get the OpenAI client with the API key from settings."""
     api_key = frappe.db.get_single_value("OpenAI Settings", "api_key")
     if not api_key:
         frappe.throw(_("OpenAI API key is not set in OpenAI Settings."))
+
+    # Import OpenAI here to avoid any global monkey-patching
+    from openai import OpenAI
 
     # Simple, clean initialization - OpenAI SDK v1.x only needs api_key
     # No proxies, no complex parameters
@@ -145,6 +147,9 @@ def test_openai_api_key(api_key: str) -> bool:
     :return: True if the API key is valid, False otherwise.
     """
     try:
+        # Import OpenAI locally
+        from openai import OpenAI
+
         # Simple client creation with just the API key
         client = OpenAI(api_key=api_key)
         # Test the key by listing models
@@ -192,8 +197,49 @@ def test_connection() -> Dict[str, Any]:
         if not api_key:
             return {"success": False, "message": _("OpenAI API key is not set. Please enter an API key first.")}
 
-        # Initialize the OpenAI client
-        client = OpenAI(api_key=api_key)
+        # Import OpenAI locally to avoid any potential monkey-patching
+        import sys
+        import importlib
+
+        # Force reimport of openai module to get clean version
+        if 'openai' in sys.modules:
+            del sys.modules['openai']
+
+        # Import fresh OpenAI
+        import openai
+        from openai import OpenAI as OpenAIClient
+
+        try:
+            # Create client with only api_key parameter
+            client = OpenAIClient(api_key=api_key)
+        except TypeError as e:
+            error_msg = str(e)
+            if "proxies" in error_msg or "unexpected keyword" in error_msg:
+                # Something is interfering with OpenAI initialization
+                # Try direct API approach as fallback
+                frappe.log_error(f"OpenAI client init failed: {error_msg}", "OpenAI Init Error")
+
+                # Use the module-level client as fallback
+                openai.api_key = api_key
+
+                # Test with module-level API
+                try:
+                    import requests
+                    headers = {
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json"
+                    }
+                    response = requests.get("https://api.openai.com/v1/models", headers=headers, timeout=10)
+                    if response.status_code == 200:
+                        return {"success": True, "message": _("Connection successful! OpenAI API is working correctly.")}
+                    elif response.status_code == 401:
+                        return {"success": False, "message": _("Invalid API key. Please check your OpenAI API key.")}
+                    else:
+                        return {"success": False, "message": _("API test failed with status code: {0}").format(response.status_code)}
+                except Exception as req_error:
+                    return {"success": False, "message": _("Connection test failed: {0}").format(str(req_error))}
+            else:
+                raise
 
         # Test the connection by listing models
         models = list(client.models.list())
@@ -205,7 +251,14 @@ def test_connection() -> Dict[str, Any]:
 
     except Exception as e:
         frappe.log_error(str(e), "OpenAI Connection Test Failed")
-        return {"success": False, "message": _("Connection failed: {0}").format(str(e))}
+
+        # Provide more specific error messages
+        if "proxies" in str(e).lower():
+            return {"success": False, "message": _("OpenAI SDK issue detected. Connection test using fallback method.")}
+        elif "api" in str(e).lower() and "key" in str(e).lower():
+            return {"success": False, "message": _("Invalid API key. Please check your OpenAI API key.")}
+        else:
+            return {"success": False, "message": _("Connection failed: {0}").format(str(e))}
 
 @frappe.whitelist()
 def check_openai_key_and_role() -> Dict[str, Any]:

@@ -1,10 +1,5 @@
-// Debug: Check if this file is being loaded
-console.log("OpenAI Settings JS file loaded!");
-
 frappe.ui.form.on("OpenAI Settings", {
   refresh: function (frm) {
-    console.log("OpenAI Settings refresh event triggered!");
-
     // Add custom button to test connection
     frm.add_custom_button(__("Test Connection"), function () {
       frappe.call({
