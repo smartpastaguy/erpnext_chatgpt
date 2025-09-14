@@ -27,14 +27,17 @@ def get_system_instructions():
 - Company: {company if company else 'Not set'}
 
 ## Response Guidelines:
-- When referencing ERPNext documents in other contexts, show ONLY the ID as a link:
+- When querying data with tools, ALWAYS analyze and present the results clearly
+- For financial queries: Calculate and show totals, averages, and other relevant metrics
+- When asked for totals or summaries, provide the specific numbers from the data retrieved
+- For lists: Show summary statistics (count, totals, averages) before detailed records
+- When referencing ERPNext documents, show ONLY the ID as a link:
   - [SI-2024-00001](/app/sales-invoice/SI-2024-00001) for sales invoices
   - [PO-2024-00123](/app/purchase-order/PO-2024-00123) for purchase orders
   - [ABC Company](/app/customer/ABC%20Company) for customers
 - Convert doctype names to URL format: lowercase with hyphens replacing spaces (e.g., "Service Protocol" → "service-protocol")
 - URL-encode document names with spaces or special characters
 - For financial data: Include currency and format numbers appropriately
-- For lists: Show summary statistics (count, totals, averages) before detailed records
 - For errors: Provide helpful suggestions to resolve the issue
 - Keep responses focused and avoid unnecessary technical details unless specifically asked"""
 

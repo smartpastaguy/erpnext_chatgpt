@@ -62,6 +62,9 @@ function openChatDialog() {
   if (saved) {
     conversation = JSON.parse(saved);
     displayConversation(conversation);
+  } else {
+    // Show suggestion prompts when chat is empty
+    showSuggestionPrompts();
   }
 }
 
@@ -125,6 +128,65 @@ function clearConversation() {
   conversation = [];
   localStorage.removeItem("chatConversation");
   document.getElementById("answer").innerHTML = "";
+  showSuggestionPrompts();
+}
+
+function showSuggestionPrompts() {
+  const answerDiv = document.getElementById("answer");
+  if (!answerDiv) return;
+
+  const prompts = [
+    "Show me today's sales invoices",
+    "What are the pending purchase orders?",
+    "Find service protocol for serial number OCU-00001",
+    "List overdue customer invoices",
+    "Show stock levels for my top items",
+    "What's the total sales this month?",
+    "Show recent delivery notes",
+    "List all employees in the Sales department",
+    "Find customer orders for ABC Company",
+    "Show payment entries from last week"
+  ];
+
+  // Randomly select 4 prompts
+  const selectedPrompts = [];
+  const promptsCopy = [...prompts];
+  for (let i = 0; i < 4 && promptsCopy.length > 0; i++) {
+    const randomIndex = Math.floor(Math.random() * promptsCopy.length);
+    selectedPrompts.push(promptsCopy.splice(randomIndex, 1)[0]);
+  }
+
+  answerDiv.innerHTML = `
+    <div style="padding: 20px; text-align: center;">
+      <div style="margin-bottom: 20px;">
+        <h5 style="color: #666; font-weight: normal;">Welcome to ERPNext AI Assistant</h5>
+        <p style="color: #888; font-size: 14px;">Ask me anything about your ERP data</p>
+      </div>
+      <div style="margin-top: 30px;">
+        <p style="color: #666; font-size: 13px; margin-bottom: 15px;">Try asking:</p>
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; justify-content: center;">
+          ${selectedPrompts.map(prompt => `
+            <button
+              class="btn btn-outline-primary btn-sm suggestion-prompt"
+              onclick="useSuggestionPrompt('${prompt.replace(/'/g, "\\'")}')"
+              style="border-radius: 20px; padding: 8px 16px; font-size: 13px; white-space: nowrap;"
+            >
+              ${prompt}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Make useSuggestionPrompt globally available
+window.useSuggestionPrompt = function(prompt) {
+  const questionInput = document.getElementById("question");
+  if (questionInput) {
+    questionInput.value = prompt;
+    handleAskButtonClick();
+  }
 }
 
 
