@@ -1068,23 +1068,52 @@ def list_delivery_notes(
     List delivery notes with advanced filtering, sorting options, and serial number search
     """
     filters = {}
-    serial_filter_notes = []
 
-    # Handle serial number search - special case requiring join with child table
+    # Handle serial number search - first find Serial and Batch Bundle, then filter
     if serial_number:
-        # Search for delivery notes containing the serial number
-        serial_filter_notes = frappe.db.sql("""
-            SELECT DISTINCT parent
-            FROM `tabDelivery Note Item`
-            WHERE serial_no LIKE %s
-        """, (f'%{serial_number}%',), as_dict=False)
+        # Step 1: Find Serial and Batch Bundle containing the serial number
+        serial_bundles = frappe.db.get_all(
+            'Serial and Batch Entry',
+            filters={
+                'serial_no': ['like', f'%{serial_number}%']
+            },
+            fields=['parent'],
+            distinct=True
+        )
 
-        if serial_filter_notes:
-            # Extract parent names from result
-            note_names = [note[0] for note in serial_filter_notes]
-            filters['name'] = ['in', note_names]
+        if serial_bundles:
+            # Extract bundle names
+            bundle_names = [bundle.parent for bundle in serial_bundles]
+
+            # Step 2: Find delivery notes containing these bundles
+            delivery_note_items = frappe.db.get_all(
+                'Delivery Note Item',
+                filters={
+                    'serial_and_batch_bundle': ['in', bundle_names]
+                },
+                fields=['parent'],
+                distinct=True
+            )
+
+            if delivery_note_items:
+                # Extract parent names from result
+                note_names = [item.parent for item in delivery_note_items]
+                filters['name'] = ['in', note_names]
+            else:
+                # No delivery notes found with this serial number
+                return json.dumps({
+                    'delivery_notes': [],
+                    'total_count': 0,
+                    'limit': limit,
+                    'offset': offset,
+                    'summary': {
+                        'total_notes': 0,
+                        'total_amount': 0,
+                        'average_amount': 0
+                    }
+                }, default=json_serial)
         else:
-            # No delivery notes found with this serial number
+            # No serial bundles found with this serial number
             return json.dumps({
                 'delivery_notes': [],
                 'total_count': 0,
@@ -1115,16 +1144,17 @@ def list_delivery_notes(
     elif end_date:
         filters['posting_date'] = ['<=', end_date]
 
-    # Item code filter - requires join with child table
+    # Item code filter - using Frappe database API
     if item_code and not serial_number:  # If serial_number is already filtered, skip item_code
-        item_filter_notes = frappe.db.sql("""
-            SELECT DISTINCT parent
-            FROM `tabDelivery Note Item`
-            WHERE item_code = %s
-        """, (item_code,), as_dict=False)
+        item_filter_notes = frappe.db.get_all(
+            'Delivery Note Item',
+            filters={'item_code': item_code},
+            fields=['parent'],
+            distinct=True
+        )
 
         if item_filter_notes:
-            item_note_names = [note[0] for note in item_filter_notes]
+            item_note_names = [note.parent for note in item_filter_notes]
             if 'name' in filters:
                 # Intersect with existing name filter
                 existing_names = filters['name'][1]
@@ -1169,13 +1199,36 @@ def list_delivery_notes(
     # If serial number was searched, add serial number info to results
     if serial_number and delivery_notes:
         for note in delivery_notes:
-            # Get items with serial numbers for this delivery note
-            items_with_serial = frappe.db.sql("""
-                SELECT item_code, item_name, serial_no, qty
-                FROM `tabDelivery Note Item`
-                WHERE parent = %s AND serial_no LIKE %s
-            """, (note['name'], f'%{serial_number}%'), as_dict=True)
-            note['matched_serial_items'] = items_with_serial
+            # Get items with the matching serial and batch bundle using Frappe Query Builder
+            from frappe.query_builder import DocType
+
+            DeliveryNoteItem = DocType('Delivery Note Item')
+            SerialBatchEntry = DocType('Serial and Batch Entry')
+
+            # Get delivery note items with their bundles
+            items = frappe.db.get_all(
+                'Delivery Note Item',
+                filters={'parent': note['name']},
+                fields=['item_code', 'item_name', 'serial_and_batch_bundle', 'qty']
+            )
+
+            matched_items = []
+            for item in items:
+                if item.serial_and_batch_bundle:
+                    # Get serial numbers from the bundle
+                    serials = frappe.db.get_all(
+                        'Serial and Batch Entry',
+                        filters={
+                            'parent': item.serial_and_batch_bundle,
+                            'serial_no': ['like', f'%{serial_number}%']
+                        },
+                        fields=['serial_no']
+                    )
+                    if serials:
+                        item['serial_numbers'] = ', '.join([s.serial_no for s in serials])
+                        matched_items.append(item)
+
+            note['matched_serial_items'] = matched_items
 
     # Get count for pagination
     total_count = frappe.db.count('Delivery Note', filters=filters)
