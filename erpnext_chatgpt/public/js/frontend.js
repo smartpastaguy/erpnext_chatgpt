@@ -1,7 +1,7 @@
 // Wait for the DOM to be fully loaded before initializing
 document.addEventListener("DOMContentLoaded", initializeChat);
 
-let currentSessionIndex = null;
+let conversation = [];
 
 async function initializeChat() {
   await loadMarkedJs();
@@ -50,7 +50,12 @@ function openChatDialog() {
   const dialog = createChatDialog();
   document.body.appendChild(dialog);
   $(dialog).modal("show");
-  loadSessions();
+  // Load existing conversation from localStorage if available
+  const saved = localStorage.getItem("chatConversation");
+  if (saved) {
+    conversation = JSON.parse(saved);
+    displayConversation(conversation);
+  }
 }
 
 function createChatDialog() {
@@ -64,17 +69,16 @@ function createChatDialog() {
     <div class="modal-dialog" role="document">
       <div class="modal-content">
         <div class="modal-header">
-          <h5 class="modal-title" id="chatDialogTitle">Ask OpenAI</h5>
-          <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-            <span aria-hidden="true">&times;</span>
-          </button>
+          <h5 class="modal-title" id="chatDialogTitle">AI Assistant</h5>
+          <div>
+            <button type="button" class="btn btn-sm btn-outline-secondary mr-2" onclick="clearConversation()">Clear Chat</button>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
         </div>
         <div class="modal-body">
-          <div id="sessions-container" class="mb-3">
-            <button class="btn btn-success" onclick="createSession()">New Session</button>
-            <ul id="sessions-list" class="list-group mt-2"></ul>
-          </div>
-          <div id="answer" class="p-3" style="background: #f4f4f4; margin-top: 10px; max-height: 300px; overflow-y: auto;"></div>
+          <div id="answer" class="p-3" style="background: #f4f4f4; min-height: 400px; max-height: 400px; overflow-y: auto;"></div>
         </div>
         <div class="modal-footer d-flex align-items-center" style="flex-wrap:nowrap;">
           <input type="text" id="question" class="form-control mr-2" placeholder="Ask a question..." aria-label="Ask a question">
@@ -107,71 +111,17 @@ function handleAskButtonClick() {
   askQuestion(question).finally(() => (input.value = ""));
 }
 
-function loadSessions() {
-  const sessions = JSON.parse(localStorage.getItem("sessions")) || [];
-  const sessionsList = document.getElementById("sessions-list");
-
-  sessionsList.innerHTML = "";
-  sessions.forEach((session, index) => {
-    const sessionItem = createSessionListItem(session, index);
-    sessionItem.addEventListener("click", () => loadSession(index)); // Correctly attaching the event listener
-    sessionsList.appendChild(sessionItem);
-  });
+function clearConversation() {
+  conversation = [];
+  localStorage.removeItem("chatConversation");
+  document.getElementById("answer").innerHTML = "";
 }
 
-function loadSession(index) {
-  currentSessionIndex = index;
-  const sessions = JSON.parse(localStorage.getItem("sessions")) || [];
-  const session = sessions[index];
-  if (session) {
-    displayConversation(session.conversation);
-  }
-}
-
-function createSessionListItem(session, index) {
-  const sessionItem = document.createElement("li");
-  sessionItem.className =
-    "list-group-item d-flex justify-content-between align-items-center";
-  sessionItem.onclick = () => loadSession(index);
-  sessionItem.innerHTML = `
-    <span style="cursor: pointer;">${session.name}</span>
-    <button class="btn btn-danger btn-sm" onclick="deleteSession(event, ${index})">Delete</button>
-  `;
-  return sessionItem;
-}
-
-function deleteSession(event, index) {
-  event.stopPropagation();
-  const sessions = JSON.parse(localStorage.getItem("sessions")) || [];
-  sessions.splice(index, 1);
-  localStorage.setItem("sessions", JSON.stringify(sessions));
-  loadSessions();
-  if (index === currentSessionIndex) {
-    currentSessionIndex = null;
-    document.getElementById("answer").innerHTML = "";
-  }
-}
-
-function createSession() {
-  const sessionName = prompt("Enter session name:");
-  if (sessionName) {
-    const sessions = JSON.parse(localStorage.getItem("sessions")) || [];
-    sessions.push({ name: sessionName, conversation: [] });
-    localStorage.setItem("sessions", JSON.stringify(sessions));
-    loadSessions();
-    currentSessionIndex = sessions.length - 1;
-  }
-}
 
 async function askQuestion(question) {
-  if (currentSessionIndex === null) {
-    alert("Please select or create a session first.");
-    return;
-  }
-
-  const sessions = JSON.parse(localStorage.getItem("sessions")) || [];
-  let conversation = sessions[currentSessionIndex].conversation;
+  // Add user message to conversation
   conversation.push({ role: "user", content: question });
+  displayConversation(conversation);
 
   try {
     const response = await fetch(
@@ -195,12 +145,15 @@ async function askQuestion(question) {
 
     const messageContent = parseResponseMessage(data);
     conversation.push({ role: "assistant", content: messageContent });
-    sessions[currentSessionIndex].conversation = conversation;
-    localStorage.setItem("sessions", JSON.stringify(sessions));
+
+    // Save conversation to localStorage
+    localStorage.setItem("chatConversation", JSON.stringify(conversation));
     displayConversation(conversation);
   } catch (error) {
     console.error("Error in askQuestion:", error);
-    document.getElementById("answer").innerHTML = `
+    // Remove the user message if there was an error
+    conversation.pop();
+    document.getElementById("answer").innerHTML += `
       <div class="alert alert-danger" role="alert">
         Error: ${error.message}. Please try again later.
       </div>
@@ -250,7 +203,7 @@ function displayConversation(conversation) {
   conversation.forEach((message) => {
     const messageElement = document.createElement("div");
     messageElement.className =
-      message.role === "user" ? "alert alert-info" : "alert alert-secondary";
+      message.role === "user" ? "alert alert-primary" : "alert alert-light";
     messageElement.innerHTML = renderMessageContent(message.content);
     conversationContainer.appendChild(messageElement);
   });
