@@ -220,50 +220,6 @@ def test_connection() -> Dict[str, Any]:
         if "api" in str(e).lower() and "key" in str(e).lower():
             return {"success": False, "message": _("Invalid API key. Please check your OpenAI API key.")}
         else:
-            return {"success": False, "message": _("Connection failed: {0}").format(str(e))}"}
-
-        except TypeError as e:
-            # If we get the proxies error, try direct API call
-            if "proxies" in str(e):
-                frappe.log_error(f"Got proxies error: {str(e)}\nFalling back to direct API call", "OpenAI Proxy Issue")
-
-                # Use direct HTTP request as fallback
-                import requests
-                headers = {
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json"
-                }
-
-                try:
-                    response = requests.get("https://api.openai.com/v1/models", headers=headers, timeout=10)
-                    if response.status_code == 200:
-                        return {"success": True, "message": _("Connection successful! (Using direct API due to proxy configuration)")}
-                    elif response.status_code == 401:
-                        return {"success": False, "message": _("Invalid API key. Please check your OpenAI API key.")}
-                    else:
-                        return {"success": False, "message": _("API test failed with status: {0}").format(response.status_code)}
-                except Exception as req_e:
-                    return {"success": False, "message": _("Direct API test failed: {0}").format(str(req_e))}
-            else:
-                raise
-
-        # Test the connection by listing models
-        models = list(client.models.list())
-
-        if models:
-            return {"success": True, "message": _("Connection successful! OpenAI API is working correctly.")}
-        else:
-            return {"success": False, "message": _("Connection established but no models available.")}
-
-    except Exception as e:
-        frappe.log_error(f"Test connection failed: {str(e)}\nError type: {type(e).__name__}", "OpenAI Connection Test Failed")
-
-        # Provide more specific error messages
-        if "proxies" in str(e).lower():
-            return {"success": False, "message": _("Proxy configuration issue. Check server logs for details.")}
-        elif "api" in str(e).lower() and "key" in str(e).lower():
-            return {"success": False, "message": _("Invalid API key. Please check your OpenAI API key.")}
-        else:
             return {"success": False, "message": _("Connection failed: {0}").format(str(e))}
 
 @frappe.whitelist()
