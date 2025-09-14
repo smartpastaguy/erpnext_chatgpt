@@ -34,8 +34,16 @@ def get_openai_client():
     # Don't pass any proxy-related parameters
     return OpenAI(api_key=api_key)
 
-def handle_tool_calls(tool_calls: List[Any], conversation: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Handle the tool calls by executing the corresponding functions and appending the results to the conversation."""
+def handle_tool_calls(tool_calls: List[Any], conversation: List[Dict[str, Any]], tool_usage_log: List[Dict[str, Any]]) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    """
+    Handle the tool calls by executing the corresponding functions and appending the results to the conversation.
+    Also track tool usage for transparency.
+
+    :param tool_calls: List of tool calls from OpenAI
+    :param conversation: Current conversation history
+    :param tool_usage_log: List to track tool usage
+    :return: Tuple of updated conversation and tool usage log
+    """
     for tool_call in tool_calls:
         function_name = tool_call.function.name
         function_to_call = available_functions.get(function_name)
@@ -44,11 +52,52 @@ def handle_tool_calls(tool_calls: List[Any], conversation: List[Dict[str, Any]])
             raise ValueError(f"Function {function_name} not found.")
 
         function_args = json.loads(tool_call.function.arguments)
+
+        # Log the tool usage
+        tool_usage_entry = {
+            "tool_name": function_name,
+            "parameters": function_args,
+            "timestamp": frappe.utils.now()
+        }
+
         try:
             function_response = function_to_call(**function_args)
+
+            # Parse response to get summary info if it's JSON
+            try:
+                response_data = json.loads(function_response)
+                if isinstance(response_data, dict):
+                    # Add summary info for better display
+                    if 'total_count' in response_data:
+                        tool_usage_entry['result_summary'] = f"Found {response_data.get('total_count', 0)} records"
+                    elif 'customers' in response_data:
+                        tool_usage_entry['result_summary'] = f"Retrieved {len(response_data['customers'])} customers"
+                    elif 'invoices' in response_data:
+                        tool_usage_entry['result_summary'] = f"Retrieved {len(response_data['invoices'])} invoices"
+                    elif 'sales_orders' in response_data:
+                        tool_usage_entry['result_summary'] = f"Retrieved {len(response_data['sales_orders'])} sales orders"
+                    elif 'quotations' in response_data:
+                        tool_usage_entry['result_summary'] = f"Retrieved {len(response_data['quotations'])} quotations"
+                    elif 'delivery_notes' in response_data:
+                        tool_usage_entry['result_summary'] = f"Retrieved {len(response_data['delivery_notes'])} delivery notes"
+                    elif isinstance(response_data, list):
+                        tool_usage_entry['result_summary'] = f"Retrieved {len(response_data)} items"
+                    else:
+                        tool_usage_entry['result_summary'] = "Data retrieved successfully"
+                else:
+                    tool_usage_entry['result_summary'] = "Data retrieved"
+            except:
+                tool_usage_entry['result_summary'] = "Query executed"
+
+            tool_usage_entry['status'] = 'success'
+
         except Exception as e:
             frappe.log_error(f"Error calling function {function_name} with args {json.dumps(function_args)}: {str(e)}", "OpenAI Tool Error")
+            tool_usage_entry['status'] = 'error'
+            tool_usage_entry['error'] = str(e)
             raise
+
+        tool_usage_log.append(tool_usage_entry)
 
         conversation.append({
             "tool_call_id": tool_call.id,
@@ -56,7 +105,7 @@ def handle_tool_calls(tool_calls: List[Any], conversation: List[Dict[str, Any]])
             "name": function_name,
             "content": str(function_response),
         })
-    return conversation
+    return conversation, tool_usage_log
 
 def estimate_token_count(messages: List[Dict[str, Any]]) -> int:
     """
@@ -88,12 +137,14 @@ def trim_conversation_to_token_limit(conversation: List[Dict[str, Any]], token_l
 def ask_openai_question(conversation: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
     Ask a question to the OpenAI model and handle the response.
+    Track all tool usage for transparency.
 
     :param conversation: List of conversation messages.
-    :return: The response from OpenAI or an error message.
+    :return: The response from OpenAI with tool usage information.
     """
     try:
         client = get_openai_client()
+        tool_usage_log = []
 
         # Add the pre-prompt as the initial message if not present
         if not conversation or conversation[0].get("role") != "system":
@@ -122,7 +173,7 @@ def ask_openai_question(conversation: List[Dict[str, Any]]) -> Dict[str, Any]:
         tool_calls = response_message.tool_calls
         if tool_calls:
             conversation.append(response_message.model_dump())
-            conversation = handle_tool_calls(tool_calls, conversation)
+            conversation, tool_usage_log = handle_tool_calls(tool_calls, conversation, tool_usage_log)
 
             # Trim again if needed after tool calls
             conversation = trim_conversation_to_token_limit(conversation, max_tokens)
@@ -131,12 +182,19 @@ def ask_openai_question(conversation: List[Dict[str, Any]]) -> Dict[str, Any]:
                 model=model,
                 messages=conversation
             )
-            return second_response.choices[0].message.model_dump()
 
-        return response_message.model_dump()
+            # Return response with tool usage information
+            response_data = second_response.choices[0].message.model_dump()
+            response_data['tool_usage'] = tool_usage_log
+            return response_data
+
+        # Return response with empty tool usage if no tools were called
+        response_data = response_message.model_dump()
+        response_data['tool_usage'] = tool_usage_log
+        return response_data
     except Exception as e:
         frappe.log_error(str(e), "OpenAI API Error")
-        return {"error": str(e)}
+        return {"error": str(e), "tool_usage": []}
 
 @frappe.whitelist()
 def test_openai_api_key(api_key: str) -> bool:

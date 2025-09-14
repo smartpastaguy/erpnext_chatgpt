@@ -150,8 +150,12 @@ async function askQuestion(question) {
     const data = await response.json();
     console.log("API response:", data);
 
-    const messageContent = parseResponseMessage(data);
-    conversation.push({ role: "assistant", content: messageContent });
+    const parsedMessage = parseResponseMessage(data);
+    conversation.push({
+      role: "assistant",
+      content: parsedMessage.content,
+      tool_usage: parsedMessage.tool_usage
+    });
 
     // Save conversation to localStorage
     localStorage.setItem("chatConversation", JSON.stringify(conversation));
@@ -171,20 +175,23 @@ async function askQuestion(question) {
 function parseResponseMessage(response) {
   // If the response is null or undefined, return an error message
   if (response == null) {
-    return "No response received.";
+    return { content: "No response received.", tool_usage: [] };
   }
 
   // If the response is an object with a message property, use that
   const message = response.message ?? response;
 
+  // Extract tool usage if present
+  const tool_usage = message.tool_usage || [];
+
   // If the message is a string, return it directly
   if (typeof message === "string") {
-    return message;
+    return { content: message, tool_usage: tool_usage };
   }
 
   // If the message is an object with a content property, return that
   if (message && typeof message === "object" && "content" in message) {
-    return message.content;
+    return { content: message.content, tool_usage: tool_usage };
   }
 
   // If the message is an array, try to find a content item
@@ -195,25 +202,133 @@ function parseResponseMessage(response) {
         (item && typeof item === "object" && "content" in item)
     );
     if (contentItem) {
-      return Array.isArray(contentItem) ? contentItem[1] : contentItem.content;
+      const content = Array.isArray(contentItem) ? contentItem[1] : contentItem.content;
+      return { content: content, tool_usage: tool_usage };
     }
   }
 
   // If we can't parse the message in any known format, return the stringified version
-  return JSON.stringify(message, null, 2);
+  return { content: JSON.stringify(message, null, 2), tool_usage: tool_usage };
 }
 
 function displayConversation(conversation) {
   const conversationContainer = document.getElementById("answer");
   conversationContainer.innerHTML = "";
 
-  conversation.forEach((message) => {
+  conversation.forEach((message, index) => {
     const messageElement = document.createElement("div");
     messageElement.className =
       message.role === "user" ? "alert alert-primary" : "alert alert-light";
-    messageElement.innerHTML = renderMessageContent(message.content);
+
+    // Add the main message content
+    let content = renderMessageContent(message.content);
+
+    // If this is an assistant message with tool usage, add a toggle button and hidden details
+    if (message.role === "assistant" && message.tool_usage && message.tool_usage.length > 0) {
+      const messageId = `msg-${index}`;
+      content += renderToolUsageToggle(message.tool_usage, messageId);
+    }
+
+    messageElement.innerHTML = content;
     conversationContainer.appendChild(messageElement);
   });
+}
+
+function renderToolUsageToggle(toolUsage, messageId) {
+  if (!toolUsage || toolUsage.length === 0) return "";
+
+  return `
+    <div class="mt-2">
+      <button
+        class="btn btn-sm btn-outline-secondary"
+        onclick="toggleToolUsage('${messageId}')"
+        style="font-size: 12px; padding: 2px 8px;"
+      >
+        <i class="fa fa-info-circle"></i>
+        <span id="${messageId}-toggle-text">Show</span> data access info
+      </button>
+      <div id="${messageId}-details" style="display: none;" class="mt-2">
+        ${renderToolUsageDetails(toolUsage)}
+      </div>
+    </div>
+  `;
+}
+
+// Make toggleToolUsage globally available for onclick events
+window.toggleToolUsage = function(messageId) {
+  const details = document.getElementById(`${messageId}-details`);
+  const toggleText = document.getElementById(`${messageId}-toggle-text`);
+
+  if (details.style.display === "none") {
+    details.style.display = "block";
+    toggleText.textContent = "Hide";
+  } else {
+    details.style.display = "none";
+    toggleText.textContent = "Show";
+  }
+}
+
+function renderToolUsageDetails(toolUsage) {
+  let toolHtml = `
+    <div class="card" style="background-color: #f8f9fa; border: 1px solid #dee2e6;">
+      <div class="card-body" style="padding: 10px;">
+        <h6 class="card-title" style="font-size: 14px; margin-bottom: 10px;">
+          <i class="fa fa-database"></i> Data Accessed (${toolUsage.length} ${toolUsage.length === 1 ? 'query' : 'queries'})
+        </h6>
+        <div style="font-size: 12px;">
+  `;
+
+  toolUsage.forEach((tool, index) => {
+    const statusIcon = tool.status === 'success' ? '✓' : '✗';
+    const statusClass = tool.status === 'success' ? 'text-success' : 'text-danger';
+
+    toolHtml += `
+      <div class="mb-2" style="padding-left: 10px; border-left: 2px solid #dee2e6;">
+        <strong>${index + 1}. ${formatToolName(tool.tool_name)}</strong>
+        <span class="${statusClass}">${statusIcon}</span>
+        ${tool.result_summary ? `<br><span class="text-muted">${tool.result_summary}</span>` : ''}
+        ${renderToolParameters(tool.parameters)}
+        ${tool.error ? `<br><span class="text-danger">Error: ${tool.error}</span>` : ''}
+      </div>
+    `;
+  });
+
+  toolHtml += `
+        </div>
+      </div>
+    </div>
+  `;
+
+  return toolHtml;
+}
+
+function formatToolName(toolName) {
+  // Convert snake_case to readable format
+  return toolName
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, l => l.toUpperCase());
+}
+
+function renderToolParameters(params) {
+  if (!params || Object.keys(params).length === 0) return "";
+
+  let paramHtml = "<br><small style='margin-left: 20px;'>Parameters: ";
+  const paramStrings = [];
+
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== null && value !== undefined && value !== "") {
+      paramStrings.push(`${key}: ${JSON.stringify(value)}`);
+    }
+  }
+
+  if (paramStrings.length > 0) {
+    paramHtml += paramStrings.join(", ");
+  } else {
+    paramHtml += "none";
+  }
+
+  paramHtml += "</small>";
+  return paramHtml;
 }
 
 function renderMessageContent(content) {
