@@ -1510,7 +1510,7 @@ def list_service_protocols(
                 'limit': limit,
                 'offset': offset,
                 'summary': {}
-            }, default=custom_json_serializer)
+            }, default=json_serial)
 
     # Validate sort_by field
     valid_sort_fields = ['name', 'customer', 'date_of_service', 'creation', 'modified']
@@ -1570,7 +1570,7 @@ def list_service_protocols(
         'limit': limit,
         'offset': offset,
         'summary': summary
-    }, default=custom_json_serializer)
+    }, default=json_serial)
 
 
 def get_service_protocol(protocol_name):
@@ -1649,7 +1649,7 @@ def get_service_protocol(protocol_name):
             else:
                 break
 
-    return json.dumps(protocol, default=custom_json_serializer)
+    return json.dumps(protocol, default=json_serial)
 
 
 # Tool definitions for Service Protocol
