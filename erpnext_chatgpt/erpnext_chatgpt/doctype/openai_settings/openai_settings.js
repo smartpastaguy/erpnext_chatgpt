@@ -1,6 +1,6 @@
 frappe.ui.form.on("OpenAI Settings", {
   refresh: function (frm) {
-    // Add custom button to test API key
+    // Add custom button to test connection
     frm.add_custom_button(__("Test Connection"), function () {
       frappe.call({
         method: "erpnext_chatgpt.erpnext_chatgpt.api.test_connection",
@@ -20,13 +20,6 @@ frappe.ui.form.on("OpenAI Settings", {
               });
             }
           }
-        },
-        error: function(r) {
-          frappe.msgprint({
-            title: __("Error"),
-            message: __("An error occurred while testing the connection."),
-            indicator: "red",
-          });
         }
       });
     });
