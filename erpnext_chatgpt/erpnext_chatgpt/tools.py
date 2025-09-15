@@ -1126,20 +1126,23 @@ def list_delivery_notes(
             bundle_names = [bundle.parent for bundle in serial_bundles]
 
             # Step 2: Find delivery notes containing these bundles
-            delivery_note_items = frappe.db.get_all(
-                'Delivery Note Item',
+            # Use Stock Ledger Entry as the authoritative source for serial tracking
+            stock_ledger_entries = frappe.db.get_all(
+                'Stock Ledger Entry',
                 filters={
-                    'serial_and_batch_bundle': ['in', bundle_names]
+                    'serial_and_batch_bundle': ['in', bundle_names],
+                    'voucher_type': 'Delivery Note'
                 },
-                fields=['parent'],
+                fields=['voucher_no'],
                 distinct=True
             )
 
-            logger.debug(f"Found {len(delivery_note_items) if delivery_note_items else 0} delivery notes with serial {serial_number}")
+            # Extract delivery note names from stock ledger entries
+            note_names = [entry.voucher_no for entry in stock_ledger_entries] if stock_ledger_entries else []
 
-            if delivery_note_items:
-                # Extract parent names from result
-                note_names = [item.parent for item in delivery_note_items]
+            logger.debug(f"Found {len(note_names)} delivery notes with serial {serial_number} via Stock Ledger Entry")
+
+            if note_names:
                 serial_number_note_names = note_names  # Store for later use
                 filters['name'] = ['in', note_names]
                 logger.debug(f"Delivery notes with serial {serial_number}: {note_names}")
