@@ -1107,7 +1107,31 @@ def get_delivery_note(delivery_note_number):
         fields=['*']
     )
 
-    # Get serial numbers from Stock Ledger Entry
+    # Collect all serial numbers
+    serial_numbers_by_item = {}
+
+    # First, check serial_and_batch_bundle from Delivery Note Items
+    for item in items:
+        if item.get('serial_and_batch_bundle'):
+            # Get serial numbers from the bundle
+            serials = frappe.db.get_all(
+                'Serial and Batch Entry',
+                filters={'parent': item['serial_and_batch_bundle']},
+                fields=['serial_no', 'qty']
+            )
+
+            if serials:
+                if item['item_code'] not in serial_numbers_by_item:
+                    serial_numbers_by_item[item['item_code']] = []
+
+                for serial in serials:
+                    serial_numbers_by_item[item['item_code']].append({
+                        'serial_no': serial.serial_no,
+                        'qty': abs(serial.qty),  # Use absolute value since qty might be negative
+                        'warehouse': item.get('warehouse', '')
+                    })
+
+    # Also check Stock Ledger Entry as fallback
     stock_entries = frappe.db.get_all(
         'Stock Ledger Entry',
         filters={
@@ -1117,10 +1141,8 @@ def get_delivery_note(delivery_note_number):
         fields=['item_code', 'serial_and_batch_bundle', 'actual_qty', 'warehouse']
     )
 
-    # Collect all serial numbers
-    serial_numbers_by_item = {}
     for entry in stock_entries:
-        if entry.serial_and_batch_bundle:
+        if entry.serial_and_batch_bundle and entry.item_code not in serial_numbers_by_item:
             # Get serial numbers from the bundle
             serials = frappe.db.get_all(
                 'Serial and Batch Entry',
@@ -1134,7 +1156,7 @@ def get_delivery_note(delivery_note_number):
             for serial in serials:
                 serial_numbers_by_item[entry.item_code].append({
                     'serial_no': serial.serial_no,
-                    'qty': serial.qty,
+                    'qty': abs(serial.qty),  # Use absolute value since qty might be negative
                     'warehouse': entry.warehouse
                 })
 

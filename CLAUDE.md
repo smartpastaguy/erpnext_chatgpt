@@ -2,7 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Commands
+## Important Environment Notes
+
+**Bench is NOT installed locally** - All bench commands must be executed on the server, not on the local development machine. The local repository is synced with the server where ERPNext/Frappe is running.
+
+## Commands (Execute on Server)
 
 ### Development
 - **Install app on ERPNext site**: `bench --site [site-name] install-app erpnext_chatgpt`
@@ -14,6 +18,78 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Testing
 - **Run doctests**: `bench --site [site-name] run-tests --app erpnext_chatgpt`
 - **Test specific doctype**: `bench --site [site-name] run-tests --doctype "OpenAI Settings"`
+
+### Debugging Commands for Server
+
+#### Test Delivery Note Serial Numbers
+```python
+# In bench console
+import frappe
+from erpnext_chatgpt.erpnext_chatgpt.tools import get_delivery_note
+
+# Test a specific delivery note
+result = get_delivery_note("MAT-DN-2025-00200")
+import json
+data = json.loads(result)
+print("Serial numbers found:", data.get('all_serial_numbers', []))
+```
+
+#### Check Serial Number Storage
+```python
+# In bench console
+import frappe
+
+# Check if delivery note has items with serial bundles
+delivery_note = "MAT-DN-2025-00200"
+items = frappe.db.get_all('Delivery Note Item',
+    filters={'parent': delivery_note},
+    fields=['item_code', 'item_name', 'serial_and_batch_bundle', 'qty'])
+print("Items:", items)
+
+# Check serial numbers in a bundle
+if items and items[0].get('serial_and_batch_bundle'):
+    bundle_id = items[0]['serial_and_batch_bundle']
+    serials = frappe.db.get_all('Serial and Batch Entry',
+        filters={'parent': bundle_id},
+        fields=['serial_no', 'qty'])
+    print("Serial numbers:", [s['serial_no'] for s in serials])
+```
+
+#### Test Tool Functions Directly
+```python
+# In bench console
+import frappe
+from erpnext_chatgpt.erpnext_chatgpt.tools import list_delivery_notes
+
+# Test listing delivery notes with serial number search
+result = list_delivery_notes(
+    customer="Österreichischer Ski Verband",
+    limit=3
+)
+import json
+data = json.loads(result)
+print(f"Found {data['total_count']} delivery notes")
+```
+
+#### Monitor API Logs
+```bash
+# On server, view real-time logs
+tail -f /path/to/frappe-bench/logs/frappe.log | grep aiassistant
+
+# View error logs
+tail -f /path/to/frappe-bench/logs/error.log
+```
+
+#### After Code Changes
+```bash
+# Always run these commands on the server after modifying Python files:
+bench restart
+bench clear-cache
+
+# If changes don't take effect, try:
+bench build
+bench migrate
+```
 
 ## Architecture
 
