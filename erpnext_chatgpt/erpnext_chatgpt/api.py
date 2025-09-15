@@ -101,18 +101,44 @@ def handle_tool_calls(tool_calls: List[Any], conversation: List[Dict[str, Any]],
                 response_data = json.loads(function_response)
                 if isinstance(response_data, dict):
                     # Add summary info for better display
-                    if 'total_count' in response_data:
-                        tool_usage_entry['result_summary'] = f"Found {response_data.get('total_count', 0)} records"
-                    elif 'customers' in response_data:
-                        tool_usage_entry['result_summary'] = f"Retrieved {len(response_data['customers'])} customers"
+                    # Check for paginated results with limit
+                    limit = response_data.get('limit')
+                    total_count = response_data.get('total_count')
+
+                    # Handle different response types
+                    if 'delivery_notes' in response_data:
+                        actual_count = len(response_data['delivery_notes'])
+                        if limit and total_count and total_count > actual_count:
+                            tool_usage_entry['result_summary'] = f"Retrieved {actual_count} of {total_count} delivery notes (limited)"
+                        else:
+                            tool_usage_entry['result_summary'] = f"Retrieved {actual_count} delivery notes"
                     elif 'invoices' in response_data:
-                        tool_usage_entry['result_summary'] = f"Retrieved {len(response_data['invoices'])} invoices"
+                        actual_count = len(response_data['invoices'])
+                        if limit and total_count and total_count > actual_count:
+                            tool_usage_entry['result_summary'] = f"Retrieved {actual_count} of {total_count} invoices (limited)"
+                        else:
+                            tool_usage_entry['result_summary'] = f"Retrieved {actual_count} invoices"
                     elif 'sales_orders' in response_data:
-                        tool_usage_entry['result_summary'] = f"Retrieved {len(response_data['sales_orders'])} sales orders"
+                        actual_count = len(response_data['sales_orders'])
+                        if limit and total_count and total_count > actual_count:
+                            tool_usage_entry['result_summary'] = f"Retrieved {actual_count} of {total_count} sales orders (limited)"
+                        else:
+                            tool_usage_entry['result_summary'] = f"Retrieved {actual_count} sales orders"
                     elif 'quotations' in response_data:
-                        tool_usage_entry['result_summary'] = f"Retrieved {len(response_data['quotations'])} quotations"
-                    elif 'delivery_notes' in response_data:
-                        tool_usage_entry['result_summary'] = f"Retrieved {len(response_data['delivery_notes'])} delivery notes"
+                        actual_count = len(response_data['quotations'])
+                        if limit and total_count and total_count > actual_count:
+                            tool_usage_entry['result_summary'] = f"Retrieved {actual_count} of {total_count} quotations (limited)"
+                        else:
+                            tool_usage_entry['result_summary'] = f"Retrieved {actual_count} quotations"
+                    elif 'customers' in response_data:
+                        actual_count = len(response_data['customers'])
+                        if limit and total_count and total_count > actual_count:
+                            tool_usage_entry['result_summary'] = f"Retrieved {actual_count} of {total_count} customers (limited)"
+                        else:
+                            tool_usage_entry['result_summary'] = f"Retrieved {actual_count} customers"
+                    elif 'total_count' in response_data:
+                        # Generic fallback for other paginated responses
+                        tool_usage_entry['result_summary'] = f"Found {total_count} records"
                     elif isinstance(response_data, list):
                         tool_usage_entry['result_summary'] = f"Retrieved {len(response_data)} items"
                     else:

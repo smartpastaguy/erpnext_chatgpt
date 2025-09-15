@@ -22,16 +22,47 @@ def json_serial(obj):
 
 
 def get_sales_invoices(start_date=None, end_date=None):
-    filters = {}
-    if start_date and end_date:
-        filters['posting_date'] = ['between', [start_date, end_date]]
+    try:
+        filters = {}
+        if start_date and end_date:
+            filters['posting_date'] = ['between', [start_date, end_date]]
 
-    invoices = frappe.db.get_all(
-        'Sales Invoice',
-        filters=filters,
-        fields=['*']
-    )
-    return json.dumps(invoices, default=json_serial)
+        # Instead of fetching all fields, only get essential ones for summary
+        # This prevents memory issues with large datasets
+        invoices = frappe.db.get_all(
+            'Sales Invoice',
+            filters=filters,
+            fields=[
+                'name', 'customer', 'customer_name', 'posting_date',
+                'grand_total', 'outstanding_amount', 'status', 'currency'
+            ],
+            limit=1000  # Add a reasonable limit to prevent huge responses
+        )
+
+        # Calculate total sales for the period
+        total_sales = sum(inv.get('grand_total', 0) for inv in invoices)
+        total_outstanding = sum(inv.get('outstanding_amount', 0) for inv in invoices)
+
+        # Log for debugging
+        frappe.logger("OpenAI").debug(f"get_sales_invoices: Found {len(invoices)} invoices for period {start_date} to {end_date}, total: {total_sales}")
+
+        return json.dumps({
+            'invoices': invoices[:100],  # Return max 100 detailed records
+            'total_count': len(invoices),
+            'total_sales': total_sales,
+            'total_outstanding': total_outstanding,
+            'period': {'start': start_date, 'end': end_date},
+            'truncated': len(invoices) > 100,
+            'message': f"Found {len(invoices)} invoices with total sales of {total_sales}"
+        }, default=json_serial)
+    except Exception as e:
+        frappe.log_error(f"Error in get_sales_invoices: {str(e)}", "OpenAI Tool Error")
+        return json.dumps({
+            'error': str(e),
+            'invoices': [],
+            'total_count': 0,
+            'total_sales': 0
+        }, default=json_serial)
 
 get_sales_invoices_tool = {
     "type": "function",
@@ -1069,7 +1100,12 @@ def list_delivery_notes(
     """
     filters = {}
 
+    # Log query parameters for debugging
+    import frappe
+    frappe.logger().debug(f"list_delivery_notes called with: serial_number={serial_number}, start_date={start_date}, end_date={end_date}, limit={limit}")
+
     # Handle serial number search - first find Serial and Batch Bundle, then filter
+    serial_number_note_names = None  # Track delivery notes found via serial number
     if serial_number:
         # Step 1: Find Serial and Batch Bundle containing the serial number
         serial_bundles = frappe.db.get_all(
@@ -1080,6 +1116,8 @@ def list_delivery_notes(
             fields=['parent'],
             distinct=True
         )
+
+        frappe.logger().debug(f"Found {len(serial_bundles) if serial_bundles else 0} serial bundles for serial {serial_number}")
 
         if serial_bundles:
             # Extract bundle names
@@ -1095,10 +1133,14 @@ def list_delivery_notes(
                 distinct=True
             )
 
+            frappe.logger().debug(f"Found {len(delivery_note_items) if delivery_note_items else 0} delivery notes with serial {serial_number}")
+
             if delivery_note_items:
                 # Extract parent names from result
                 note_names = [item.parent for item in delivery_note_items]
+                serial_number_note_names = note_names  # Store for later use
                 filters['name'] = ['in', note_names]
+                frappe.logger().debug(f"Delivery notes with serial {serial_number}: {note_names}")
             else:
                 # No delivery notes found with this serial number
                 return json.dumps({
@@ -1136,13 +1178,21 @@ def list_delivery_notes(
     if transporter:
         filters['transporter'] = ['like', f'%{transporter}%']
 
-    # Date filters
-    if start_date and end_date:
-        filters['posting_date'] = ['between', [start_date, end_date]]
-    elif start_date:
-        filters['posting_date'] = ['>=', start_date]
-    elif end_date:
-        filters['posting_date'] = ['<=', end_date]
+    # Date filters - only apply if no serial number search OR if explicitly requested
+    # When searching by serial number, we want ALL matching delivery notes regardless of date
+    # unless the user explicitly provides date filters
+    if not serial_number:
+        # Apply date filters normally when not searching by serial number
+        if start_date and end_date:
+            filters['posting_date'] = ['between', [start_date, end_date]]
+        elif start_date:
+            filters['posting_date'] = ['>=', start_date]
+        elif end_date:
+            filters['posting_date'] = ['<=', end_date]
+    else:
+        # For serial number searches, only apply date filters if explicitly provided by user
+        # This prevents implicit date filtering that might exclude recent delivery notes
+        frappe.logger().debug(f"Serial number search - date filters ignored to ensure all matching notes are found")
 
     # Item code filter - using Frappe database API
     if item_code and not serial_number:  # If serial_number is already filtered, skip item_code
@@ -1184,17 +1234,47 @@ def list_delivery_notes(
     # Build order_by clause
     order_by = f'{sort_by} {sort_order}'
 
-    delivery_notes = frappe.db.get_all(
-        'Delivery Note',
-        filters=filters,
-        fields=['name', 'customer', 'customer_name', 'posting_date',
-                'grand_total', 'status', 'per_billed', 'currency',
-                'lr_no', 'lr_date', 'transporter', 'vehicle_no',
-                'is_return', 'creation', 'modified'],
-        order_by=order_by,
-        limit_start=offset,
-        limit_page_length=limit
-    )
+    # Log the final filters being applied
+    frappe.logger().debug(f"Final filters for delivery notes query: {filters}")
+    frappe.logger().debug(f"Sort: {order_by}, Limit: {limit}, Offset: {offset}")
+
+    # When searching by serial number with limit=1, we need to ensure proper ordering
+    # The issue is that frappe.db.get_all with 'name IN [...]' filter may not respect order_by correctly
+    # So we need to fetch all matching records first, then sort and limit in Python
+    if serial_number and limit == 1 and serial_number_note_names:
+        # Fetch all delivery notes matching the serial number without limit
+        all_matching_notes = frappe.db.get_all(
+            'Delivery Note',
+            filters=filters,
+            fields=['name', 'customer', 'customer_name', 'posting_date',
+                    'grand_total', 'status', 'per_billed', 'currency',
+                    'lr_no', 'lr_date', 'transporter', 'vehicle_no',
+                    'is_return', 'creation', 'modified'],
+            order_by=order_by
+        )
+
+        frappe.logger().debug(f"Found {len(all_matching_notes)} total delivery notes for serial {serial_number}")
+        for note in all_matching_notes[:3]:  # Log first 3 for debugging
+            frappe.logger().debug(f"  - {note['name']}: {note['posting_date']}")
+
+        # Apply offset and limit manually
+        delivery_notes = all_matching_notes[offset:offset + limit]
+    else:
+        delivery_notes = frappe.db.get_all(
+            'Delivery Note',
+            filters=filters,
+            fields=['name', 'customer', 'customer_name', 'posting_date',
+                    'grand_total', 'status', 'per_billed', 'currency',
+                    'lr_no', 'lr_date', 'transporter', 'vehicle_no',
+                    'is_return', 'creation', 'modified'],
+            order_by=order_by,
+            limit_start=offset,
+            limit_page_length=limit
+        )
+
+    frappe.logger().debug(f"Query returned {len(delivery_notes) if delivery_notes else 0} delivery notes")
+    if delivery_notes and serial_number:
+        frappe.logger().debug(f"Top result: {delivery_notes[0]['name']} dated {delivery_notes[0]['posting_date']}")
 
     # If serial number was searched, add serial number info to results
     if serial_number and delivery_notes:
