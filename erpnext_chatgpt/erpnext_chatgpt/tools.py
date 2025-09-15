@@ -1084,6 +1084,96 @@ list_sales_orders_tool = {
 }
 
 
+def get_delivery_note(delivery_note_number):
+    """
+    Get complete details of a specific delivery note including all line items and serial numbers
+    """
+    # Get main delivery note document
+    delivery_note = frappe.db.get_value(
+        'Delivery Note',
+        delivery_note_number,
+        ['*'],
+        as_dict=True
+    )
+
+    if not delivery_note:
+        return json.dumps({'error': f'Delivery Note {delivery_note_number} not found'}, default=json_serial)
+
+    # Get all line items
+    items = frappe.db.get_all(
+        'Delivery Note Item',
+        filters={'parent': delivery_note_number},
+        fields=['*']
+    )
+
+    # Get serial numbers from Stock Ledger Entry
+    stock_entries = frappe.db.get_all(
+        'Stock Ledger Entry',
+        filters={
+            'voucher_no': delivery_note_number,
+            'voucher_type': 'Delivery Note'
+        },
+        fields=['item_code', 'serial_and_batch_bundle', 'actual_qty', 'warehouse']
+    )
+
+    # Collect all serial numbers
+    serial_numbers_by_item = {}
+    for entry in stock_entries:
+        if entry.serial_and_batch_bundle:
+            # Get serial numbers from the bundle
+            serials = frappe.db.get_all(
+                'Serial and Batch Entry',
+                filters={'parent': entry.serial_and_batch_bundle},
+                fields=['serial_no', 'qty']
+            )
+
+            if entry.item_code not in serial_numbers_by_item:
+                serial_numbers_by_item[entry.item_code] = []
+
+            for serial in serials:
+                serial_numbers_by_item[entry.item_code].append({
+                    'serial_no': serial.serial_no,
+                    'qty': serial.qty,
+                    'warehouse': entry.warehouse
+                })
+
+    # Add serial numbers to items
+    for item in items:
+        if item['item_code'] in serial_numbers_by_item:
+            item['serial_numbers'] = serial_numbers_by_item[item['item_code']]
+
+    # Combine all data
+    delivery_note['items'] = items
+    delivery_note['total_serialized_items'] = len(serial_numbers_by_item)
+
+    # Get all unique serial numbers for summary
+    all_serials = []
+    for item_serials in serial_numbers_by_item.values():
+        all_serials.extend([s['serial_no'] for s in item_serials])
+    delivery_note['all_serial_numbers'] = list(set(all_serials))
+
+    return json.dumps(delivery_note, default=json_serial)
+
+
+get_delivery_note_tool = {
+    "type": "function",
+    "function": {
+        "name": "get_delivery_note",
+        "description": "Get complete details of a specific delivery note including all line items, serial numbers, customer info, and delivery status. Use when asked about a specific delivery note by name/number.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "delivery_note_number": {
+                    "type": "string",
+                    "description": "Delivery note number (e.g., MAT-DN-2025-00201)",
+                },
+            },
+            "required": ["delivery_note_number"],
+        },
+    },
+}
+
+
 def list_delivery_notes(
     customer=None,
     status=None,
@@ -1827,6 +1917,7 @@ def get_tools():
         list_quotations_tool,
         list_sales_orders_tool,
         list_delivery_notes_tool,
+        get_delivery_note_tool,
         get_purchase_invoices_tool,
         get_journal_entries_tool,
         get_payments_tool,
@@ -1851,6 +1942,7 @@ available_functions = {
     "list_quotations": list_quotations,
     "list_sales_orders": list_sales_orders,
     "list_delivery_notes": list_delivery_notes,
+    "get_delivery_note": get_delivery_note,
     "get_purchase_invoices": get_purchase_invoices,
     "get_journal_entries": get_journal_entries,
     "get_payments": get_payments,
