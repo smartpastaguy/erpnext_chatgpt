@@ -1,4 +1,5 @@
 import frappe
+import logging
 from frappe import _
 import json
 from typing import List, Dict, Any
@@ -6,6 +7,7 @@ from erpnext_chatgpt.erpnext_chatgpt.tools import get_tools, available_functions
 
 # Initialize module-level logger with aiassistant namespace
 logger = frappe.logger("aiassistant", allow_site=True)
+logger.setLevel(logging.DEBUG)
 
 def get_system_instructions():
     """Get system instructions with current date and user context."""

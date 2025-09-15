@@ -1,11 +1,12 @@
 import frappe
+import logging
 import json
 from datetime import datetime, date, timedelta
 from decimal import Decimal
 
 # Initialize module-level logger with aiassistant namespace
 logger = frappe.logger("aiassistant", allow_site=True)
-
+logger.setLevel(logging.DEBUG)
 
 def json_serial(obj):
     """JSON serializer for objects not serializable by default json code"""
