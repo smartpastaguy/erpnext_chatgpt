@@ -215,7 +215,7 @@ def ask_openai_question(conversation: List[Dict[str, Any]]) -> Dict[str, Any]:
         # Trim conversation to stay within the token limit
         conversation = trim_conversation_to_token_limit(conversation, max_tokens)
 
-        frappe.logger("aiassistant").debug(f"Conversation: {json.dumps(conversation)}")
+        frappe.logger().debug(f"Conversation: {json.dumps(conversation)}")
 
         tools = get_tools()
         response = client.chat.completions.create(
@@ -227,7 +227,7 @@ def ask_openai_question(conversation: List[Dict[str, Any]]) -> Dict[str, Any]:
 
         response_message = response.choices[0].message
 
-        frappe.logger("aiassistant").debug(f"OpenAI Response: {response_message}")
+        frappe.logger().debug(f"OpenAI Response: {response_message}")
 
         tool_calls = response_message.tool_calls
         if tool_calls:

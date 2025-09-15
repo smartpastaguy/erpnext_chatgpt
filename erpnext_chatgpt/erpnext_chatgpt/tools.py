@@ -44,7 +44,7 @@ def get_sales_invoices(start_date=None, end_date=None):
         total_outstanding = sum(inv.get('outstanding_amount', 0) for inv in invoices)
 
         # Log for debugging
-        frappe.logger("aiassistant").debug(f"get_sales_invoices: Found {len(invoices)} invoices for period {start_date} to {end_date}, total: {total_sales}")
+        frappe.logger().debug(f"get_sales_invoices: Found {len(invoices)} invoices for period {start_date} to {end_date}, total: {total_sales}")
 
         return json.dumps({
             'invoices': invoices[:100],  # Return max 100 detailed records
@@ -1102,7 +1102,7 @@ def list_delivery_notes(
 
     # Log query parameters for debugging
     import frappe
-    frappe.logger("aiassistant").debug(f"list_delivery_notes called with: serial_number={serial_number}, start_date={start_date}, end_date={end_date}, limit={limit}")
+    frappe.logger().debug(f"list_delivery_notes called with: serial_number={serial_number}, start_date={start_date}, end_date={end_date}, limit={limit}")
 
     # Handle serial number search - first find Serial and Batch Bundle, then filter
     serial_number_note_names = None  # Track delivery notes found via serial number
@@ -1117,7 +1117,7 @@ def list_delivery_notes(
             distinct=True
         )
 
-        frappe.logger("aiassistant").debug(f"Found {len(serial_bundles) if serial_bundles else 0} serial bundles for serial {serial_number}")
+        frappe.logger().debug(f"Found {len(serial_bundles) if serial_bundles else 0} serial bundles for serial {serial_number}")
 
         if serial_bundles:
             # Extract bundle names
@@ -1133,14 +1133,14 @@ def list_delivery_notes(
                 distinct=True
             )
 
-            frappe.logger("aiassistant").debug(f"Found {len(delivery_note_items) if delivery_note_items else 0} delivery notes with serial {serial_number}")
+            frappe.logger().debug(f"Found {len(delivery_note_items) if delivery_note_items else 0} delivery notes with serial {serial_number}")
 
             if delivery_note_items:
                 # Extract parent names from result
                 note_names = [item.parent for item in delivery_note_items]
                 serial_number_note_names = note_names  # Store for later use
                 filters['name'] = ['in', note_names]
-                frappe.logger("aiassistant").debug(f"Delivery notes with serial {serial_number}: {note_names}")
+                frappe.logger().debug(f"Delivery notes with serial {serial_number}: {note_names}")
             else:
                 # No delivery notes found with this serial number
                 return json.dumps({
@@ -1192,7 +1192,7 @@ def list_delivery_notes(
     else:
         # For serial number searches, only apply date filters if explicitly provided by user
         # This prevents implicit date filtering that might exclude recent delivery notes
-        frappe.logger("aiassistant").debug(f"Serial number search - date filters ignored to ensure all matching notes are found")
+        frappe.logger().debug(f"Serial number search - date filters ignored to ensure all matching notes are found")
 
     # Item code filter - using Frappe database API
     if item_code and not serial_number:  # If serial_number is already filtered, skip item_code
@@ -1235,8 +1235,8 @@ def list_delivery_notes(
     order_by = f'{sort_by} {sort_order}'
 
     # Log the final filters being applied
-    frappe.logger("aiassistant").debug(f"Final filters for delivery notes query: {filters}")
-    frappe.logger("aiassistant").debug(f"Sort: {order_by}, Limit: {limit}, Offset: {offset}")
+    frappe.logger().debug(f"Final filters for delivery notes query: {filters}")
+    frappe.logger().debug(f"Sort: {order_by}, Limit: {limit}, Offset: {offset}")
 
     # When searching by serial number with limit=1, we need to ensure proper ordering
     # The issue is that frappe.db.get_all with 'name IN [...]' filter may not respect order_by correctly
@@ -1253,9 +1253,9 @@ def list_delivery_notes(
             order_by=order_by
         )
 
-        frappe.logger("aiassistant").debug(f"Found {len(all_matching_notes)} total delivery notes for serial {serial_number}")
+        frappe.logger().debug(f"Found {len(all_matching_notes)} total delivery notes for serial {serial_number}")
         for note in all_matching_notes[:3]:  # Log first 3 for debugging
-            frappe.logger("aiassistant").debug(f"  - {note['name']}: {note['posting_date']}")
+            frappe.logger().debug(f"  - {note['name']}: {note['posting_date']}")
 
         # Apply offset and limit manually
         delivery_notes = all_matching_notes[offset:offset + limit]
@@ -1272,9 +1272,9 @@ def list_delivery_notes(
             limit_page_length=limit
         )
 
-    frappe.logger("aiassistant").debug(f"Query returned {len(delivery_notes) if delivery_notes else 0} delivery notes")
+    frappe.logger().debug(f"Query returned {len(delivery_notes) if delivery_notes else 0} delivery notes")
     if delivery_notes and serial_number:
-        frappe.logger("aiassistant").debug(f"Top result: {delivery_notes[0]['name']} dated {delivery_notes[0]['posting_date']}")
+        frappe.logger().debug(f"Top result: {delivery_notes[0]['name']} dated {delivery_notes[0]['posting_date']}")
 
     # If serial number was searched, add serial number info to results
     if serial_number and delivery_notes:
