@@ -1913,9 +1913,8 @@ def create_lead(
 
             lead_data['country'] = country
 
-        # Set default status and source
+        # Set default status
         lead_data['status'] = 'Open'
-        lead_data['source'] = 'Other'  # Default source, can be customized
 
         # Create the lead document
         lead_doc = frappe.get_doc(lead_data)
