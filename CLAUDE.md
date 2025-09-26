@@ -339,3 +339,75 @@ def get_invoice_with_items(invoice_name):
 
     return json.dumps(invoice, default=custom_json_serializer)
 ```
+
+## Creating Documents in ERPNext
+
+When creating new documents (DocTypes) in ERPNext through tools, follow the Frappe API patterns:
+
+### Basic Document Creation Pattern
+
+```python
+def create_document(field1, field2, field3=None):
+    """Create a new document in ERPNext."""
+    try:
+        # Prepare document data
+        doc_data = {
+            'doctype': 'Your DocType Name',
+            'field1': field1,
+            'field2': field2
+        }
+
+        # Add optional fields
+        if field3:
+            doc_data['field3'] = field3
+
+        # Create the document object
+        doc = frappe.get_doc(doc_data)
+
+        # Insert into database
+        doc.insert(ignore_permissions=False)
+
+        # Commit the transaction
+        frappe.db.commit()
+
+        # Return success with created document details
+        return json.dumps({
+            'success': True,
+            'document_id': doc.name,
+            'message': f"Document {doc.name} created successfully"
+        }, default=json_serial)
+
+    except frappe.exceptions.ValidationError as e:
+        return json.dumps({
+            'error': f"Validation error: {str(e)}",
+            'success': False
+        }, default=json_serial)
+    except Exception as e:
+        frappe.log_error(f"Error creating document: {str(e)}", "Document Creation Error")
+        return json.dumps({
+            'error': str(e),
+            'success': False
+        }, default=json_serial)
+```
+
+### Key Points for Document Creation
+
+1. **Use frappe.get_doc()**: Create document instances with `frappe.get_doc(dict)`
+2. **Insert Method**: Use `doc.insert()` to save the document to the database
+3. **Commit Transaction**: Call `frappe.db.commit()` to ensure the document is persisted
+4. **Permissions**: Use `ignore_permissions=False` to respect user permissions
+5. **Error Handling**: Catch `frappe.exceptions.ValidationError` for field validation errors
+6. **Return Format**: Always return JSON with success status and document details
+
+### Document API Reference
+
+For more details on the Frappe Document API, see: https://docs.frappe.io/framework/user/en/api/document
+
+Key methods for document manipulation:
+- `frappe.get_doc()` - Create or get a document
+- `doc.insert()` - Insert a new document
+- `doc.save()` - Save changes to existing document
+- `doc.submit()` - Submit a submittable document
+- `doc.cancel()` - Cancel a submitted document
+- `doc.delete()` - Delete a document
+- `frappe.db.commit()` - Commit database transaction

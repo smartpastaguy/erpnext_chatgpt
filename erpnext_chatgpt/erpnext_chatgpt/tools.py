@@ -1771,6 +1771,230 @@ def list_service_protocols(
     }, default=json_serial)
 
 
+def create_lead(
+    organization_name=None,
+    first_name=None,
+    last_name=None,
+    email=None,
+    phone=None,
+    country=None
+):
+    """
+    Create a new Lead in ERPNext with validation.
+    Requires either organization_name OR (first_name AND last_name).
+    """
+    try:
+        # Validate required fields
+        if not organization_name and not (first_name and last_name):
+            return json.dumps({
+                'error': 'Either organization_name OR (first_name AND last_name) is required'
+            }, default=json_serial)
+
+        # Prepare lead data
+        lead_data = {
+            'doctype': 'Lead'
+        }
+
+        # Set lead name based on what's provided
+        if organization_name:
+            lead_data['company_name'] = organization_name
+            lead_data['organization_lead'] = 1
+            lead_data['lead_name'] = organization_name
+        else:
+            lead_data['lead_name'] = f"{first_name} {last_name}"
+            lead_data['first_name'] = first_name
+            lead_data['last_name'] = last_name
+
+        # Add optional fields
+        if email:
+            lead_data['email_id'] = email
+        if phone:
+            lead_data['mobile_no'] = phone
+
+        # Handle country with validation and correction
+        if country:
+            # Common country name corrections
+            country_corrections = {
+                'usa': 'United States',
+                'us': 'United States',
+                'united states of america': 'United States',
+                'uk': 'United Kingdom',
+                'england': 'United Kingdom',
+                'britain': 'United Kingdom',
+                'great britain': 'United Kingdom',
+                'uae': 'United Arab Emirates',
+                'emirates': 'United Arab Emirates',
+                'deutschland': 'Germany',
+                'oesterreich': 'Austria',
+                'österreich': 'Austria',
+                'schweiz': 'Switzerland',
+                'suisse': 'Switzerland',
+                'svizzera': 'Switzerland',
+                'holland': 'Netherlands',
+                'the netherlands': 'Netherlands',
+                'česko': 'Czech Republic',
+                'czechia': 'Czech Republic',
+                'slovensko': 'Slovakia',
+                'belgië': 'Belgium',
+                'belgique': 'Belgium',
+                'sverige': 'Sweden',
+                'norge': 'Norway',
+                'danmark': 'Denmark',
+                'suomi': 'Finland',
+                'polska': 'Poland',
+                'magyarország': 'Hungary',
+                'hrvatska': 'Croatia',
+                'slovenija': 'Slovenia',
+                'srbija': 'Serbia',
+                'italia': 'Italy',
+                'españa': 'Spain',
+                'france': 'France',
+                'portugal': 'Portugal',
+                'rossiya': 'Russia',
+                'russia': 'Russian Federation',
+                'china': 'China',
+                'prc': 'China',
+                'nippon': 'Japan',
+                'nihon': 'Japan',
+                'south korea': 'Korea, Republic of',
+                'korea': 'Korea, Republic of',
+                'brasil': 'Brazil',
+                'méxico': 'Mexico',
+                'argentina': 'Argentina',
+                'chile': 'Chile',
+                'colombia': 'Colombia',
+                'perú': 'Peru',
+                'venezuela': 'Venezuela',
+                'australia': 'Australia',
+                'new zealand': 'New Zealand',
+                'nz': 'New Zealand',
+                'india': 'India',
+                'pakistan': 'Pakistan',
+                'bangladesh': 'Bangladesh',
+                'south africa': 'South Africa',
+                'egypt': 'Egypt',
+                'turkey': 'Turkey',
+                'türkiye': 'Turkey',
+                'saudi arabia': 'Saudi Arabia',
+                'ksa': 'Saudi Arabia',
+                'israel': 'Israel',
+                'singapore': 'Singapore',
+                'malaysia': 'Malaysia',
+                'thailand': 'Thailand',
+                'vietnam': 'Vietnam',
+                'philippines': 'Philippines',
+                'indonesia': 'Indonesia',
+                'canada': 'Canada'
+            }
+
+            # Normalize country input
+            country_lower = country.lower().strip()
+
+            # Check for common corrections first
+            if country_lower in country_corrections:
+                country = country_corrections[country_lower]
+            else:
+                # Try to match with existing countries in the system
+                # Capitalize first letter of each word for standard format
+                country = ' '.join(word.capitalize() for word in country.split())
+
+                # Check if the country exists in the system
+                country_exists = frappe.db.exists('Country', country)
+                if not country_exists:
+                    # Try to find a similar country name
+                    all_countries = frappe.db.get_all('Country', fields=['name'])
+                    country_names = [c['name'] for c in all_countries]
+
+                    # Check for partial matches
+                    for existing_country in country_names:
+                        if country.lower() in existing_country.lower() or existing_country.lower() in country.lower():
+                            country = existing_country
+                            break
+
+            lead_data['country'] = country
+
+        # Set default status and source
+        lead_data['status'] = 'Open'
+        lead_data['source'] = 'Other'  # Default source, can be customized
+
+        # Create the lead document
+        lead_doc = frappe.get_doc(lead_data)
+
+        # Insert the document
+        lead_doc.insert(ignore_permissions=False)
+
+        # Commit the transaction to ensure the lead is saved
+        frappe.db.commit()
+
+        # Log the creation
+        logger.debug(f"Created lead: {lead_doc.name} for {lead_data['lead_name']}")
+
+        # Return the created lead details
+        return json.dumps({
+            'success': True,
+            'lead_id': lead_doc.name,
+            'lead_name': lead_doc.lead_name,
+            'company_name': lead_doc.company_name if hasattr(lead_doc, 'company_name') else None,
+            'email': lead_doc.email_id if hasattr(lead_doc, 'email_id') else None,
+            'phone': lead_doc.mobile_no if hasattr(lead_doc, 'mobile_no') else None,
+            'country': lead_doc.country if hasattr(lead_doc, 'country') else None,
+            'status': lead_doc.status,
+            'message': f"Lead {lead_doc.name} created successfully"
+        }, default=json_serial)
+
+    except frappe.exceptions.ValidationError as e:
+        logger.error(f"Validation error creating lead: {str(e)}")
+        return json.dumps({
+            'error': f"Validation error: {str(e)}",
+            'success': False
+        }, default=json_serial)
+    except Exception as e:
+        frappe.log_error(f"Error creating lead: {str(e)}", "Lead Creation Error")
+        return json.dumps({
+            'error': str(e),
+            'success': False
+        }, default=json_serial)
+
+
+create_lead_tool = {
+    "type": "function",
+    "function": {
+        "name": "create_lead",
+        "description": "Create a new lead (potential customer) in ERPNext. Use this when someone wants to add a new business prospect or potential customer. Requires either organization name OR individual's first and last name.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "organization_name": {
+                    "type": "string",
+                    "description": "Name of the organization/company (use this for business leads)"
+                },
+                "first_name": {
+                    "type": "string",
+                    "description": "First name of the contact person (required if organization_name is not provided)"
+                },
+                "last_name": {
+                    "type": "string",
+                    "description": "Last name of the contact person (required if organization_name is not provided)"
+                },
+                "email": {
+                    "type": "string",
+                    "description": "Email address of the lead"
+                },
+                "phone": {
+                    "type": "string",
+                    "description": "Phone/mobile number of the lead"
+                },
+                "country": {
+                    "type": "string",
+                    "description": "Country name in English (e.g., 'United States', 'Germany', 'Austria'). Common misspellings and variations will be automatically corrected."
+                }
+            },
+            "required": []
+        }
+    }
+}
+
+
 def get_service_protocol(protocol_name):
     """
     Get detailed information about a specific Service Protocol including all devices.
@@ -1946,6 +2170,7 @@ def get_tools():
         get_payments_tool,
         list_service_protocols_tool,
         get_service_protocol_tool,
+        create_lead_tool,
     ]
 
 
@@ -1971,4 +2196,5 @@ available_functions = {
     "get_payments": get_payments,
     "list_service_protocols": list_service_protocols,
     "get_service_protocol": get_service_protocol,
+    "create_lead": create_lead,
 }
