@@ -27,6 +27,23 @@
       "label": "Max Tokens",
       "default": 8000,
       "description": "Maximum number of tokens for conversation context (default: 8000)"
+    },
+    {
+      "fieldname": "section_break_1",
+      "fieldtype": "Section Break",
+      "label": "System Instructions"
+    },
+    {
+      "fieldname": "system_instructions",
+      "fieldtype": "Long Text",
+      "label": "System Instructions",
+      "description": "Custom instructions for the AI assistant. These will be included in every conversation. Use {user_name}, {user_email}, {user_roles}, {company}, and {current_datetime} as placeholders."
+    },
+    {
+      "fieldname": "placeholder_help",
+      "fieldtype": "HTML",
+      "label": "Available Placeholders",
+      "options": "<div class='alert alert-info'>\n<h5>Available Placeholders:</h5>\n<ul>\n<li><code>{user_name}</code> - Full name of the current user</li>\n<li><code>{user_email}</code> - Email address of the current user</li>\n<li><code>{user_roles}</code> - Comma-separated list of user roles</li>\n<li><code>{company}</code> - Current default company</li>\n<li><code>{current_datetime}</code> - Current date and time</li>\n</ul>\n<p class='text-muted mt-2'>These placeholders will be automatically replaced with actual values when the AI assistant is initialized.</p>\n</div>"
     }
   ],
   "permissions": [

@@ -16,35 +16,29 @@ def get_system_instructions():
     user_roles = frappe.get_roles(current_user)
     company = frappe.defaults.get_user_default("company") or frappe.defaults.get_global_default("company")
 
-    return f"""You are an AI assistant integrated with ERPNext, helping {user_full_name} ({current_user}) with their ERP queries.
+    # Get custom system instructions from settings
+    custom_instructions = frappe.db.get_single_value("OpenAI Settings", "system_instructions")
 
-## Core Instructions:
-- Provide accurate, concise, and actionable responses based on ERPNext data
-- When querying ERPNext objects without specific property requests, return the 'name' property by default
-- Ask clarifying questions when queries are ambiguous
-- Format responses clearly using markdown for better readability
-- When presenting data, summarize key insights before showing detailed records
+    # If no custom instructions are set, tell the user to configure them
+    if not custom_instructions or custom_instructions.strip() == "":
+        return "No system instructions are currently configured. Please go to the OpenAI Settings page to set up custom system instructions for the AI assistant."
 
-## Current Context:
-- Date/Time: {frappe.utils.now()}
-- User: {user_full_name} ({current_user})
-- Roles: {', '.join(user_roles) if user_roles else 'No roles assigned'}
-- Company: {company if company else 'Not set'}
+    # Replace placeholders with actual values
+    try:
+        system_instructions = custom_instructions.format(
+            user_name=user_full_name,
+            user_email=current_user,
+            user_roles=', '.join(user_roles) if user_roles else 'No roles assigned',
+            company=company if company else 'Not set',
+            current_datetime=frappe.utils.now()
+        )
+    except KeyError as e:
+        # Handle case where placeholder is used incorrectly
+        logger.warning(f"Invalid placeholder in system instructions: {e}")
+        # Return instructions without replacement if there's an error
+        system_instructions = custom_instructions
 
-## Response Guidelines:
-- When querying data with tools, ALWAYS analyze and present the results clearly
-- For financial queries: Calculate and show totals, averages, and other relevant metrics
-- When asked for totals or summaries, provide the specific numbers from the data retrieved
-- For lists: Show summary statistics (count, totals, averages) before detailed records
-- When referencing ERPNext documents, show ONLY the ID as a link:
-  - [SI-2024-00001](/app/sales-invoice/SI-2024-00001) for sales invoices
-  - [PO-2024-00123](/app/purchase-order/PO-2024-00123) for purchase orders
-  - [ABC Company](/app/customer/ABC%20Company) for customers
-- Convert doctype names to URL format: lowercase with hyphens replacing spaces (e.g., "Service Protocol" → "service-protocol")
-- URL-encode document names with spaces or special characters
-- For financial data: Include currency and format numbers appropriately
-- For errors: Provide helpful suggestions to resolve the issue
-- Keep responses focused and avoid unnecessary technical details unless specifically asked"""
+    return system_instructions
 
 def get_model_settings():
     """Get model and max_tokens from settings."""
