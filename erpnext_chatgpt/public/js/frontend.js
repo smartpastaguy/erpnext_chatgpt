@@ -54,9 +54,18 @@ function createChatButton() {
 }
 
 function openChatDialog() {
-  const dialog = createChatDialog();
-  document.body.appendChild(dialog);
+  // Check if dialog already exists
+  let dialog = document.getElementById("chatDialog");
+
+  if (!dialog) {
+    // Create new dialog only if it doesn't exist
+    dialog = createChatDialog();
+    document.body.appendChild(dialog);
+  }
+
+  // Show the dialog
   $(dialog).modal("show");
+
   // Load existing conversation from localStorage if available
   const saved = localStorage.getItem("chatConversation");
   if (saved) {
@@ -81,7 +90,7 @@ function createChatDialog() {
         <div class="modal-header">
           <h5 class="modal-title" id="chatDialogTitle">AI Assistant</h5>
           <div>
-            <button type="button" class="btn btn-sm btn-outline-secondary mr-2" onclick="clearConversation()">Clear Chat</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary mr-2" onclick="window.clearConversation()">Clear Chat</button>
             <button type="button" class="close" data-dismiss="modal" aria-label="Close">
               <span aria-hidden="true">&times;</span>
             </button>
@@ -99,20 +108,21 @@ function createChatDialog() {
   `;
 
   const askButton = dialog.querySelector("#askButton");
-  askButton.addEventListener("click", handleAskButtonClick);
+  askButton.addEventListener("click", window.handleAskButtonClick);
 
   const questionInput = dialog.querySelector("#question");
   questionInput.addEventListener("keypress", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
-      handleAskButtonClick();
+      window.handleAskButtonClick();
     }
   });
 
   return dialog;
 }
 
-function handleAskButtonClick() {
+// Make handleAskButtonClick globally available
+window.handleAskButtonClick = function() {
   const input = document.getElementById("question");
   const question = input.value.trim();
   if (!question) return;
@@ -124,10 +134,14 @@ function handleAskButtonClick() {
   askQuestion(question);
 }
 
-function clearConversation() {
+// Make clearConversation globally available
+window.clearConversation = function() {
   conversation = [];
   localStorage.removeItem("chatConversation");
-  document.getElementById("answer").innerHTML = "";
+  const answerDiv = document.getElementById("answer");
+  if (answerDiv) {
+    answerDiv.innerHTML = "";
+  }
   showSuggestionPrompts();
 }
 
@@ -185,7 +199,7 @@ window.useSuggestionPrompt = function(prompt) {
   const questionInput = document.getElementById("question");
   if (questionInput) {
     questionInput.value = prompt;
-    handleAskButtonClick();
+    window.handleAskButtonClick();
   }
 }
 
@@ -601,7 +615,8 @@ function renderCollapsibleObject(object) {
   `;
 }
 
-function toggleCollapse(button) {
+// Make toggleCollapse globally available
+window.toggleCollapse = function(button) {
   const content = button.nextElementSibling;
   content.style.display = content.style.display === "none" ? "block" : "none";
 }
