@@ -1,1 +1,1 @@
-ERPNext ChatGPT
+erpnext_chatgpt
